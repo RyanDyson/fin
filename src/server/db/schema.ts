@@ -77,6 +77,9 @@ export const courses = pgTable("courses", {
   description: text("description"),
   createdAt: timestamp("created_at").$defaultFn(() => /* @_PURE_ */ new Date()),
   updatedAt: timestamp("updated_at").$defaultFn(() => /* @_PURE_ */ new Date()),
+  brainrot: text("brainrot_id")
+    .notNull()
+    .references(() => brainrot.id, { onDelete: "cascade" }),
   user_id: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
@@ -124,6 +127,12 @@ export const messages = pgTable("messages", {
     .$defaultFn(() => new Date())
     .notNull(),
 });
+
+export const brainrot = pgTable("brainrot", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  personalityPrompt: text("personality_prompt").notNull(),
+})
 
 export const twoFactor = pgTable("two_factor", {
   id: text("id").primaryKey(),
