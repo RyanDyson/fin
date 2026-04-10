@@ -22,6 +22,8 @@ type Course = {
   description: string;
   files: File[];
   brainrot: string;
+  completedObjectives: number;
+  totalObjectives: number;
   createdAt: Date;
 };
 
@@ -67,6 +69,8 @@ const initialCourses: Course[] = [
       "Learn by teaching an assistant LLM while another model grades your reasoning step-by-step.",
     files: [],
     brainrot: "Sigma Tutor",
+    completedObjectives: 2,
+    totalObjectives: 10,
     createdAt: new Date("2026-03-15"),
   },
   {
@@ -76,6 +80,8 @@ const initialCourses: Course[] = [
       "Practice explaining arrays, trees, and graphs in simple language to build true mastery.",
     files: [],
     brainrot: "NPC Challenger",
+    completedObjectives: 7,
+    totalObjectives: 12,
     createdAt: new Date("2026-03-28"),
   },
 ];
@@ -126,6 +132,8 @@ export default function Page() {
         description: draftCourse.description,
         files: draftCourse.files,
         brainrot: selectedBrainrotOption.name,
+        completedObjectives: 0,
+        totalObjectives: 10,
         createdAt: new Date(),
       },
       ...current,
@@ -136,6 +144,20 @@ export default function Page() {
     setFiles([]);
     setDraftCourse(null);
     setIsBrainrotOpen(false);
+  }
+
+  function getProgressPercent(course: Course) {
+    if (course.totalObjectives <= 0) return 0;
+    return Math.min(
+      100,
+      Math.round((course.completedObjectives / course.totalObjectives) * 100),
+    );
+  }
+
+  function getProgressColor(progressPercent: number) {
+    if (progressPercent < 40) return "bg-red-500";
+    if (progressPercent < 75) return "bg-amber-500";
+    return "bg-emerald-500";
   }
 
   return (
@@ -160,16 +182,31 @@ export default function Page() {
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-muted-foreground block text-xs">
-                    {course.files.length} file
-                    {course.files.length === 1 ? "" : "s"}
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block text-xs">
+                      {course.files.length} file
+                      {course.files.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <span className="text-muted-foreground text-xs">
+                    {course.createdAt.toLocaleDateString()}
                   </span>
                 </div>
-                <span className="text-muted-foreground text-xs">
-                  {course.createdAt.toLocaleDateString()}
-                </span>
+
+                <div className="space-y-1.5">
+                  <p className="text-muted-foreground text-xs">
+                    {course.completedObjectives}/{course.totalObjectives}{" "}
+                    objectives
+                  </p>
+                  <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+                    <div
+                      className={`h-full rounded-full transition-all ${getProgressColor(getProgressPercent(course))}`}
+                      style={{ width: `${getProgressPercent(course)}%` }}
+                    />
+                  </div>
+                </div>
               </CardContent>
 
               <CardFooter>
