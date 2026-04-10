@@ -1,4 +1,16 @@
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
+
+export enum MessageRole {
+  SYSTEM = "system",
+  USER = "user",
+  ASSISTANT = "assistant",
+}
+
+export const messageRoleEnum = pgEnum("role", [
+  MessageRole.SYSTEM,
+  MessageRole.USER,
+  MessageRole.ASSISTANT,
+]);
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -107,7 +119,7 @@ export const messages = pgTable("messages", {
     .notNull()
     .references(() => chats.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
-  role: text("role").notNull(),
+  role: messageRoleEnum("role").notNull(),
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())
     .notNull(),
@@ -121,3 +133,6 @@ export const twoFactor = pgTable("two_factor", {
   secret: text("secret").notNull(),
   backupCodes: text("backup_codes").notNull(),
 });
+
+export type Chat = typeof chats.$inferSelect;
+export type Message = typeof messages.$inferSelect;
