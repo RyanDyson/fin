@@ -67,6 +67,57 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at").$defaultFn(() => /* @_PURE_ */ new Date()),
 });
 
+export const courses = pgTable("courses", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").$defaultFn(() => /* @_PURE_ */ new Date()),
+  updatedAt: timestamp("updated_at").$defaultFn(() => /* @_PURE_ */ new Date()),
+  user_id: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
+
+export const objectives = pgTable("objectives", {
+  id: text("id").primaryKey(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").$defaultFn(() => /* @_PURE_ */ new Date()),
+  updatedAt: timestamp("updated_at").$defaultFn(() => /* @_PURE_ */ new Date()),
+  course_id: text("course_id")
+    .notNull()
+    .references(() => courses.id, { onDelete: "cascade" }),
+});
+
+export const files = pgTable("files", {
+  id: text("id").primaryKey(),
+  course_id: text("course_id")
+    .notNull()
+    .references(() => courses.id, { onDelete: "cascade" }),
+  file_url: text("file_url").notNull(),
+});
+
+export const chats = pgTable("chats", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  active: boolean("active")
+    .$defaultFn(() => false)
+    .notNull(),
+});
+
+export const messages = pgTable("messages", {
+  id: text("id").primaryKey(),
+  chat_id: text("chat_id")
+    .notNull()
+    .references(() => chats.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  role: text("role").notNull(),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => new Date())
+    .notNull(),
+});
+
 export const twoFactor = pgTable("two_factor", {
   id: text("id").primaryKey(),
   userId: text("user_id")
