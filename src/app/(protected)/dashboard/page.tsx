@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,39 +40,16 @@ type Course = {
   createdAt: Date;
 };
 
+type BrainrotOption = {
+  id: string;
+  name: string;
+};
+
 type CourseDraft = {
   name: string;
   description: string;
   files: File[];
 };
-
-const brainrotOptions = [
-  {
-    id: "skibidi-scholar",
-    name: "Skibidi Scholar",
-    // vibe: "Asks chaotic but surprisingly smart follow-ups.",
-  },
-  {
-    id: "sigma-tutor",
-    name: "Sigma Tutor",
-    // vibe: "Calm, direct, and focused on precision.",
-  },
-  {
-    id: "rizz-analyst",
-    name: "Rizz Analyst",
-    // vibe: "Turns dry explanations into confident takes.",
-  },
-  {
-    id: "delulu-debater",
-    name: "Delulu Debater",
-    // vibe: "Challenges logic with wild what-if scenarios.",
-  },
-  {
-    id: "npc-challenger",
-    name: "NPC Challenger",
-    // vibe: "Plays naive to expose weak explanations.",
-  },
-] as const;
 
 export default function Page() {
   const router = useRouter();
@@ -82,21 +59,36 @@ export default function Page() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [selectedBrainrot, setSelectedBrainrot] = useState<string>(
-    brainrotOptions[0].id,
-  );
+  const [selectedBrainrot, setSelectedBrainrot] = useState<string>("");
   const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
   const {
     data: dbCourses,
     isLoading: isCoursesLoading,
     error: coursesError,
   } = api.course.list.useQuery();
+  const { data: dbBrainrots } = api.brainrot.list.useQuery();
+
+  const brainrotOptions = useMemo<BrainrotOption[]>(
+    () =>
+      (dbBrainrots ?? []).map((option) => ({
+        id: option.id,
+        name: option.name,
+      })),
+    [dbBrainrots],
+  );
+
+  useEffect(() => {
+    if (!selectedBrainrot && brainrotOptions.length > 0) {
+      setSelectedBrainrot(brainrotOptions[0].id);
+    }
+  }, [brainrotOptions, selectedBrainrot]);
 
   const selectedBrainrotOption = useMemo(
     () =>
       brainrotOptions.find((option) => option.id === selectedBrainrot) ??
-      brainrotOptions[0],
-    [selectedBrainrot],
+      brainrotOptions[0] ??
+      null,
+    [brainrotOptions, selectedBrainrot],
   );
 
   const canCreate = useMemo(
@@ -125,7 +117,7 @@ export default function Page() {
         name: draftCourse.name,
         description: draftCourse.description,
         fileCount: draftCourse.files.length,
-        brainrot: selectedBrainrotOption.name,
+        brainrot: selectedBrainrotOption?.name ?? "Unknown",
         completedObjectives: 0,
         totalObjectives: 10,
         createdAt: new Date(),
@@ -146,7 +138,7 @@ export default function Page() {
       name: course.title,
       description: course.description,
       fileCount: course.fileCount,
-      brainrot: "Sigma Tutor",
+      brainrot: course.brainrotName,
       completedObjectives: course.completedObjectives,
       totalObjectives: course.totalObjectives,
       createdAt: course.createdAt ? new Date(course.createdAt) : new Date(),
@@ -184,9 +176,7 @@ export default function Page() {
         {isCoursesLoading ? (
           <p className="text-muted-foreground text-sm">Loading courses...</p>
         ) : coursesError ? (
-          <p className="text-destructive text-sm">
-            Could not load courses.
-          </p>
+          <p className="text-destructive text-sm">Could not load courses.</p>
         ) : courses.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No courses found yet. Create one to get started.
@@ -229,7 +219,11 @@ export default function Page() {
                 </CardContent>
 
                 <CardFooter>
-                  <Button variant="outline" className="w-full" onClick={() => router.push(`/dashboard/${course.id}`)}>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => router.push(`/dashboard/${course.id}`)}
+                  >
                     Open course
                   </Button>
                 </CardFooter>
@@ -285,7 +279,7 @@ export default function Page() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="course-files">Course materials (PDF)</Label>
+                <Label htmlFor="course-files">Course materials</Label>
                 <FileUpload
                   maxFiles={5}
                   maxSize={5 * 1024 * 1024}
@@ -297,15 +291,21 @@ export default function Page() {
                   <FileUploadDropzone>
                     <div className="flex flex-col items-center gap-1 text-center">
                       <div className="flex items-center justify-center rounded-full border p-2.5">
-                        <Upload className="size-6 text-muted-foreground" />
+                        <Upload className="text-muted-foreground size-6" />
                       </div>
-                      <p className="text-sm font-medium">Drag & drop files here</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm font-medium">
+                        Drag & drop files here
+                      </p>
+                      <p className="text-muted-foreground text-xs">
                         Or click to browse (max 5 files, up to 5MB each)
                       </p>
                     </div>
                     <FileUploadTrigger asChild>
-                      <Button variant="outline" size="sm" className="mt-2 w-fit">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-fit"
+                      >
                         Browse files
                       </Button>
                     </FileUploadTrigger>
@@ -316,7 +316,11 @@ export default function Page() {
                         <FileUploadItemPreview />
                         <FileUploadItemMetadata />
                         <FileUploadItemDelete asChild>
-                          <Button variant="ghost" size="icon" className="size-7">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7"
+                          >
                             <X className="size-4" />
                           </Button>
                         </FileUploadItemDelete>
@@ -399,7 +403,12 @@ export default function Page() {
               >
                 Back
               </Button>
-              <Button onClick={handleConfirmBrainrot}>Create course</Button>
+              <Button
+                onClick={handleConfirmBrainrot}
+                disabled={!selectedBrainrotOption}
+              >
+                Create course
+              </Button>
             </CardFooter>
           </Card>
         </div>
