@@ -9,8 +9,8 @@ export const updateRouter = createTRPCRouter({
 		.input(
 			z.object({
 				user_id: z.string().min(1),
-				course_id: z.string().min(1),
-				brainrot_id: z.string().min(1).optional(),
+				course_id: z.number().int().positive(),
+				brainrot_id: z.number().int().positive().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -58,7 +58,7 @@ export const updateRouter = createTRPCRouter({
 		.input(
 			z.object({
 				user_id: z.string().min(1),
-				course_id: z.string().min(1),
+				course_id: z.number().int().positive(),
 				title: z.string().min(1),
 			}),
 		)
@@ -91,7 +91,7 @@ export const updateRouter = createTRPCRouter({
 		.input(
 			z.object({
 				user_id: z.string().min(1),
-				course_id: z.string().min(1),
+				course_id: z.number().int().positive(),
 				description: z.string().nullable(),
 			}),
 		)

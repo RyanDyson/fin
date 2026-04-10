@@ -22,17 +22,17 @@ export const getRouter = createTRPCRouter({
         .where(eq(courses.user_id, input.user_id));
     }),
 
-  getObjectives: publicProcedure
-    .input(
-      z.object({
-        objective_id: z.string().min(1),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const [objective] = await ctx.db
-        .select()
-        .from(objectives)
-        .where(eq(objectives.id, input.objective_id));
+	getObjectives: publicProcedure
+		.input(
+			z.object({
+				objective_id: z.number().int().positive(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const [objective] = await ctx.db
+				.select()
+				.from(objectives)
+				.where(eq(objectives.id, input.objective_id));
 
       if (!objective) {
         throw new TRPCError({
@@ -44,28 +44,21 @@ export const getRouter = createTRPCRouter({
       return objective;
     }),
 
-  getSession: publicProcedure
-    .input(
-      z.object({
-        courseId: z.string().min(1),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      return await ctx.db
-        .select()
-        .from(chats)
-        .where(
-          and(eq(chats.courseId, input.courseId), eq(chats.active, false)),
-        );
-    }),
+	getChats: publicProcedure
+		.input(
+			z.object({
+				courseId: z.number().int().positive(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			return await ctx.db
+				.select()
+				.from(chats)
+				.where(and(eq(chats.courseId, input.courseId), eq(chats.active, false)));
+		}),
 
-  getBrainrot: publicProcedure.query(async ({ ctx }) => {
-    return await ctx.db
-      .select({
-        id: brainrot.id,
-        name: brainrot.name,
-        personalityPrompt: brainrot.personalityPrompt,
-      })
-      .from(brainrot);
-  }),
+	getBrainrot: publicProcedure
+		.query(async ({ ctx }) => {
+			return await ctx.db.select().from(brainrot);
+		}),
 });

@@ -47,7 +47,6 @@ export const postRouter = createTRPCRouter({
       const [course] = await ctx.db
         .insert(courses)
         .values({
-          id: crypto.randomUUID(),
           title: input.title,
           description: input.description ?? null,
           user_id: input.user_id,
@@ -63,7 +62,7 @@ export const postRouter = createTRPCRouter({
   postObjectives: publicProcedure
     .input(
       z.object({
-        course_id: z.string().min(1),
+        course_id: z.number().int().positive(),
         content: z.string().min(1),
       }),
     )
@@ -71,7 +70,6 @@ export const postRouter = createTRPCRouter({
       const [objective] = await ctx.db
         .insert(objectives)
         .values({
-          id: crypto.randomUUID(),
           course_id: input.course_id,
           content: input.content,
           createdAt: new Date(),
@@ -85,7 +83,7 @@ export const postRouter = createTRPCRouter({
   postorUploadFiles: publicProcedure
     .input(
       z.object({
-        course_id: z.string().min(1),
+        course_id: z.number().int().positive(),
         file_url: z.string().url(),
       }),
     )
@@ -93,7 +91,6 @@ export const postRouter = createTRPCRouter({
       const [file] = await ctx.db
         .insert(files)
         .values({
-          id: crypto.randomUUID(),
           course_id: input.course_id,
           file_url: input.file_url,
         })
@@ -105,8 +102,8 @@ export const postRouter = createTRPCRouter({
   postSession: publicProcedure
     .input(
       z.object({
-        courseId: z.string().min(1),
-        completedObjectiveId: z.string().min(1),
+        courseId: z.number().int().positive(),
+        completedObjectiveId: z.number().int().positive(),
         active: z.boolean().optional(),
       }),
     )
@@ -114,7 +111,6 @@ export const postRouter = createTRPCRouter({
       const [chat] = await ctx.db
         .insert(chats)
         .values({
-          id: crypto.randomUUID(),
           courseId: input.courseId,
           completedObjectives: input.completedObjectiveId,
           active: input.active ?? false,
