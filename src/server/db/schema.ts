@@ -88,6 +88,9 @@ export const courses = pgTable("courses", {
 export const objectives = pgTable("objectives", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   content: text("content").notNull(),
+  isDone: boolean("is_done")
+    .$defaultFn(() => false)
+    .notNull(),
   createdAt: timestamp("created_at").$defaultFn(() => /* @_PURE_ */ new Date()),
   updatedAt: timestamp("updated_at").$defaultFn(() => /* @_PURE_ */ new Date()),
   course_id: integer("course_id")
@@ -113,7 +116,6 @@ export const chats = pgTable("chats", {
     .notNull(),
   completedObjectives: integer("completed_objectives")
     .notNull()
-    .references(() => objectives.id, { onDelete: "cascade" }),
 });
 
 export const messages = pgTable("messages", {

@@ -44,6 +44,31 @@ export const getRouter = createTRPCRouter({
 			return objective;
 		}),
 
+	getDoneObjectives: publicProcedure
+		.input(
+			z.object({
+				course_id: z.number().int().positive().optional(),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			if (input.course_id) {
+				return await ctx.db
+					.select()
+					.from(objectives)
+					.where(
+						and(
+							eq(objectives.course_id, input.course_id),
+							eq(objectives.isDone, true),
+						),
+					);
+			}
+
+			return await ctx.db
+				.select()
+				.from(objectives)
+				.where(eq(objectives.isDone, true));
+		}),
+
 	getChats: publicProcedure
 		.input(
 			z.object({
