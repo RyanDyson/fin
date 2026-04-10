@@ -15,12 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Navbar } from "@/components/global/navbar";
+import { api } from "@/trpc/react";
+import { useRouter } from "next/navigation";
 
 type Course = {
   id: string;
   name: string;
   description: string;
-  files: File[];
+  fileCount: number;
   brainrot: string;
   completedObjectives: number;
   totalObjectives: number;
@@ -61,33 +63,9 @@ const brainrotOptions = [
   },
 ] as const;
 
-const initialCourses: Course[] = [
-  {
-    id: "course-1",
-    name: "Applied Algebra",
-    description:
-      "Learn by teaching an assistant LLM while another model grades your reasoning step-by-step.",
-    files: [],
-    brainrot: "Sigma Tutor",
-    completedObjectives: 2,
-    totalObjectives: 10,
-    createdAt: new Date("2026-03-15"),
-  },
-  {
-    id: "course-2",
-    name: "Intro to Data Structures",
-    description:
-      "Practice explaining arrays, trees, and graphs in simple language to build true mastery.",
-    files: [],
-    brainrot: "NPC Challenger",
-    completedObjectives: 7,
-    totalObjectives: 12,
-    createdAt: new Date("2026-03-28"),
-  },
-];
-
 export default function Page() {
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const router = useRouter();
+  const [localCourses, setLocalCourses] = useState<Course[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBrainrotOpen, setIsBrainrotOpen] = useState(false);
   const [name, setName] = useState("");
@@ -97,6 +75,11 @@ export default function Page() {
     brainrotOptions[0].id,
   );
   const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
+  const {
+    data: dbCourses,
+    isLoading: isCoursesLoading,
+    error: coursesError,
+  } = api.course.list.useQuery();
 
   const selectedBrainrotOption = useMemo(
     () =>
@@ -125,12 +108,12 @@ export default function Page() {
   function handleConfirmBrainrot() {
     if (!draftCourse) return;
 
-    setCourses((current) => [
+    setLocalCourses((current) => [
       {
         id: crypto.randomUUID(),
         name: draftCourse.name,
         description: draftCourse.description,
-        files: draftCourse.files,
+        fileCount: draftCourse.files.length,
         brainrot: selectedBrainrotOption.name,
         completedObjectives: 0,
         totalObjectives: 10,
@@ -145,6 +128,21 @@ export default function Page() {
     setDraftCourse(null);
     setIsBrainrotOpen(false);
   }
+
+  const courses = useMemo<Course[]>(() => {
+    const fetchedCourses: Course[] = (dbCourses ?? []).map((course) => ({
+      id: course.id,
+      name: course.title,
+      description: course.description,
+      fileCount: course.fileCount,
+      brainrot: "Sigma Tutor",
+      completedObjectives: course.completedObjectives,
+      totalObjectives: course.totalObjectives,
+      createdAt: course.createdAt ? new Date(course.createdAt) : new Date(),
+    }));
+
+    return [...localCourses, ...fetchedCourses];
+  }, [dbCourses, localCourses]);
 
   function getProgressPercent(course: Course) {
     if (course.totalObjectives <= 0) return 0;
@@ -172,51 +170,62 @@ export default function Page() {
           </h1>
         </header>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {courses.map((course) => (
-            <Card key={course.id} className="border-border/60 bg-card/95">
-              <CardHeader>
-                <CardTitle>{course.name}</CardTitle>
-                <CardDescription className="line-clamp-2">
-                  {course.description}
-                </CardDescription>
-              </CardHeader>
+        {isCoursesLoading ? (
+          <p className="text-muted-foreground text-sm">Loading courses...</p>
+        ) : coursesError ? (
+          <p className="text-destructive text-sm">
+            Could not load courses.
+          </p>
+        ) : courses.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No courses found yet. Create one to get started.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {courses.map((course) => (
+              <Card key={course.id} className="border-border/60 bg-card/95">
+                <CardHeader>
+                  <CardTitle>{course.name}</CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {course.description}
+                  </CardDescription>
+                </CardHeader>
 
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground block text-xs">
-                      {course.files.length} file
-                      {course.files.length === 1 ? "" : "s"}
+                <CardContent className="space-y-3">
+                  <div className="space-y-1.5">
+                    <p className="text-muted-foreground text-xs">
+                      {course.completedObjectives}/{course.totalObjectives}{" "}
+                      objectives
+                    </p>
+                    <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+                      <div
+                        className={`h-full rounded-full transition-all ${getProgressColor(getProgressPercent(course))}`}
+                        style={{ width: `${getProgressPercent(course)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <span className="text-muted-foreground block text-xs">
+                        {course.fileCount} file
+                        {course.fileCount === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      {course.createdAt.toLocaleDateString()}
                     </span>
                   </div>
-                  <span className="text-muted-foreground text-xs">
-                    {course.createdAt.toLocaleDateString()}
-                  </span>
-                </div>
+                </CardContent>
 
-                <div className="space-y-1.5">
-                  <p className="text-muted-foreground text-xs">
-                    {course.completedObjectives}/{course.totalObjectives}{" "}
-                    objectives
-                  </p>
-                  <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-                    <div
-                      className={`h-full rounded-full transition-all ${getProgressColor(getProgressPercent(course))}`}
-                      style={{ width: `${getProgressPercent(course)}%` }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-
-              <CardFooter>
-                <Button variant="outline" className="w-full">
-                  Open course
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+                <CardFooter>
+                  <Button variant="outline" className="w-full" onClick={() => router.push(`/dashboard/${course.id}`)}>
+                    Open course
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
 
       <Button
