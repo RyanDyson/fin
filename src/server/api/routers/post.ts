@@ -28,7 +28,7 @@ export const postRouter = createTRPCRouter({
         title: z.string().min(1),
         description: z.string().nullable().optional(),
         user_id: z.string().min(1),
-        brainrot_id: z.string().min(1),
+        brainrot_id: z.number().int().positive(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -103,17 +103,33 @@ export const postRouter = createTRPCRouter({
     .input(
       z.object({
         courseId: z.number().int().positive(),
-        completedObjectiveId: z.number().int().positive(),
+        completedObjectiveId: z.number().int().positive().optional(),
         active: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      let completedObjectiveId = input.completedObjectiveId;
+
+      if (!completedObjectiveId) {
+        const [placeholderObjective] = await ctx.db
+          .insert(objectives)
+          .values({
+            course_id: input.courseId,
+            content: "Session started",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .returning({ id: objectives.id });
+
+        completedObjectiveId = placeholderObjective.id;
+      }
+
       const [chat] = await ctx.db
         .insert(chats)
         .values({
           courseId: input.courseId,
-          completedObjectives: input.completedObjectiveId,
-          active: input.active ?? false,
+          completedObjectives: completedObjectiveId,
+          active: input.active ?? true,
         })
         .returning();
 

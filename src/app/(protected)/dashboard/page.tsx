@@ -15,20 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Navbar } from "@/components/global/navbar";
+import { CourseFileUpload } from "@/components/global/course-file-upload";
 import { api } from "@/trpc/react";
 import { authClient } from "@/server/better-auth/client";
 import { useRouter } from "next/navigation";
-import { Upload, X } from "lucide-react";
-import {
-  FileUpload,
-  FileUploadDropzone,
-  FileUploadItem,
-  FileUploadItemDelete,
-  FileUploadItemMetadata,
-  FileUploadItemPreview,
-  FileUploadList,
-  FileUploadTrigger,
-} from "@/components/ui/file-upload";
 
 type Course = {
   id: number;
@@ -63,7 +53,8 @@ export default function Page() {
   const [files, setFiles] = useState<File[]>([]);
   const [selectedBrainrot, setSelectedBrainrot] = useState<number | null>(null);
   const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
-  const resolvedUserId = sessionData?.user.id ?? "rBji61OyvMYVCetmynej7FDOroGqUDT9";
+  const resolvedUserId =
+    sessionData?.user.id ?? "rBji61OyvMYVCetmynej7FDOroGqUDT9";
   const {
     data: dbCourses,
     isLoading: isCoursesLoading,
@@ -106,7 +97,9 @@ export default function Page() {
 
   const brainrotNameById = useMemo(
     () =>
-      new Map((dbBrainrots ?? []).map((option) => [String(option.id), option.name])),
+      new Map(
+        (dbBrainrots ?? []).map((option) => [String(option.id), option.name]),
+      ),
     [dbBrainrots],
   );
 
@@ -134,7 +127,7 @@ export default function Page() {
       title: draftCourse.name,
       description: draftCourse.description,
       user_id: resolvedUserId,
-      brainrot_id: String(selectedBrainrotOption.id),
+      brainrot_id: selectedBrainrotOption.id,
     });
 
     setName("");
@@ -294,54 +287,13 @@ export default function Page() {
 
               <div className="space-y-2">
                 <Label htmlFor="course-files">Course materials</Label>
-                <FileUpload
+                <CourseFileUpload
+                  files={files}
+                  onFilesChange={setFiles}
                   maxFiles={5}
                   maxSize={5 * 1024 * 1024}
-                  className="w-full"
-                  value={files}
-                  onValueChange={setFiles}
-                  multiple
-                >
-                  <FileUploadDropzone>
-                    <div className="flex flex-col items-center gap-1 text-center">
-                      <div className="flex items-center justify-center rounded-full border p-2.5">
-                        <Upload className="text-muted-foreground size-6" />
-                      </div>
-                      <p className="text-sm font-medium">
-                        Drag & drop files here
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        Or click to browse (max 5 files, up to 5MB each)
-                      </p>
-                    </div>
-                    <FileUploadTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 w-fit"
-                      >
-                        Browse files
-                      </Button>
-                    </FileUploadTrigger>
-                  </FileUploadDropzone>
-                  <FileUploadList>
-                    {files.map((file, index) => (
-                      <FileUploadItem key={index} value={file}>
-                        <FileUploadItemPreview />
-                        <FileUploadItemMetadata />
-                        <FileUploadItemDelete asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-7"
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        </FileUploadItemDelete>
-                      </FileUploadItem>
-                    ))}
-                  </FileUploadList>
-                </FileUpload>
+                  helperText="Or click to browse (max 5 files, up to 5MB each)"
+                />
               </div>
             </CardContent>
 
