@@ -17,6 +17,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Navbar } from "@/components/global/navbar";
 import { api } from "@/trpc/react";
 import { useRouter } from "next/navigation";
+import { Upload, X } from "lucide-react";
+import {
+  FileUpload,
+  FileUploadDropzone,
+  FileUploadItem,
+  FileUploadItemDelete,
+  FileUploadItemMetadata,
+  FileUploadItemPreview,
+  FileUploadList,
+  FileUploadTrigger,
+} from "@/components/ui/file-upload";
 
 type Course = {
   id: string;
@@ -275,20 +286,44 @@ export default function Page() {
 
               <div className="space-y-2">
                 <Label htmlFor="course-files">Course materials (PDF)</Label>
-                <Input
-                  id="course-files"
-                  type="file"
-                  accept="application/pdf"
+                <FileUpload
+                  maxFiles={5}
+                  maxSize={5 * 1024 * 1024}
+                  className="w-full"
+                  value={files}
+                  onValueChange={setFiles}
                   multiple
-                  onChange={(event) =>
-                    setFiles(Array.from(event.target.files ?? []))
-                  }
-                />
-                {files.length > 0 ? (
-                  <p className="text-muted-foreground text-xs">
-                    {files.length} file{files.length === 1 ? "" : "s"} selected
-                  </p>
-                ) : null}
+                >
+                  <FileUploadDropzone>
+                    <div className="flex flex-col items-center gap-1 text-center">
+                      <div className="flex items-center justify-center rounded-full border p-2.5">
+                        <Upload className="size-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm font-medium">Drag & drop files here</p>
+                      <p className="text-xs text-muted-foreground">
+                        Or click to browse (max 5 files, up to 5MB each)
+                      </p>
+                    </div>
+                    <FileUploadTrigger asChild>
+                      <Button variant="outline" size="sm" className="mt-2 w-fit">
+                        Browse files
+                      </Button>
+                    </FileUploadTrigger>
+                  </FileUploadDropzone>
+                  <FileUploadList>
+                    {files.map((file, index) => (
+                      <FileUploadItem key={index} value={file}>
+                        <FileUploadItemPreview />
+                        <FileUploadItemMetadata />
+                        <FileUploadItemDelete asChild>
+                          <Button variant="ghost" size="icon" className="size-7">
+                            <X className="size-4" />
+                          </Button>
+                        </FileUploadItemDelete>
+                      </FileUploadItem>
+                    ))}
+                  </FileUploadList>
+                </FileUpload>
               </div>
             </CardContent>
 
