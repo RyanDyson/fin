@@ -1,5 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
   brainrot,
@@ -20,23 +19,6 @@ export const postRouter = createTRPCRouter({
       return {
         greeting: `Hello ${input.text}`,
       };
-    }),
-
-  getSecretMessage: publicProcedure.query(() => {
-    return "you can now see this secret message!";
-  }),
-
-  getCourse: publicProcedure
-    .input(
-      z.object({
-        user_id: z.string().min(1),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      return await ctx.db
-        .select()
-        .from(courses)
-        .where(eq(courses.user_id, input.user_id));
     }),
 
   postCourse: publicProcedure
@@ -73,121 +55,6 @@ export const postRouter = createTRPCRouter({
       return course;
     }),
 
-  updateBrainrot: publicProcedure
-    .input(
-      z.object({
-        user_id: z.string().min(1),
-        course_id: z.string().min(1),
-        brainrot_id: z.string().min(1).optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      let targetBrainrotId = input.brainrot_id;
-
-      if (!targetBrainrotId) {
-        const [defaultBrainrot] = await ctx.db.select().from(brainrot).limit(1);
-
-        if (!defaultBrainrot) {
-          throw new TRPCError({
-            code: "PRECONDITION_FAILED",
-            message:
-              "No brainrot record exists. Create one before updating course brainrot.",
-          });
-        }
-
-        targetBrainrotId = defaultBrainrot.id;
-      }
-
-      const [updatedCourse] = await ctx.db
-        .update(courses)
-        .set({
-          brainrot: targetBrainrotId,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(courses.id, input.course_id),
-            eq(courses.user_id, input.user_id),
-          ),
-        )
-        .returning();
-
-      if (!updatedCourse) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Course not found for this user.",
-        });
-      }
-
-      return updatedCourse;
-    }),
-
-  updateCouseTitle: publicProcedure
-    .input(
-      z.object({
-        user_id: z.string().min(1),
-        course_id: z.string().min(1),
-        title: z.string().min(1),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const [updatedCourse] = await ctx.db
-        .update(courses)
-        .set({
-          title: input.title,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(courses.id, input.course_id),
-            eq(courses.user_id, input.user_id),
-          ),
-        )
-        .returning();
-
-      if (!updatedCourse) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Course not found for this user.",
-        });
-      }
-
-      return updatedCourse;
-    }),
-
-  updateCourseDecription: publicProcedure
-    .input(
-      z.object({
-        user_id: z.string().min(1),
-        course_id: z.string().min(1),
-        description: z.string().nullable(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const [updatedCourse] = await ctx.db
-        .update(courses)
-        .set({
-          description: input.description,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(courses.id, input.course_id),
-            eq(courses.user_id, input.user_id),
-          ),
-        )
-        .returning();
-
-      if (!updatedCourse) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Course not found for this user.",
-        });
-      }
-
-      return updatedCourse;
-    }),
-
   postObjectives: publicProcedure
     .input(
       z.object({
@@ -206,28 +73,6 @@ export const postRouter = createTRPCRouter({
           updatedAt: new Date(),
         })
         .returning();
-
-      return objective;
-    }),
-
-  getObjectives: publicProcedure
-    .input(
-      z.object({
-        objective_id: z.string().min(1),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const [objective] = await ctx.db
-        .select()
-        .from(objectives)
-        .where(eq(objectives.id, input.objective_id));
-
-      if (!objective) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Objective not found.",
-        });
-      }
 
       return objective;
     }),
@@ -255,7 +100,7 @@ export const postRouter = createTRPCRouter({
   postSession: publicProcedure
     .input(
       z.object({
-        userId: z.string().min(1),
+        courseId: z.string().min(1),
         completedObjectiveId: z.string().min(1),
         active: z.boolean().optional(),
       }),
@@ -265,7 +110,7 @@ export const postRouter = createTRPCRouter({
         .insert(chats)
         .values({
           id: crypto.randomUUID(),
-          userId: input.userId,
+          courseId: input.courseId,
           completedObjectives: input.completedObjectiveId,
           active: input.active ?? false,
         })
@@ -274,16 +119,4 @@ export const postRouter = createTRPCRouter({
       return chat;
     }),
 
-  getSession: publicProcedure
-    .input(
-      z.object({
-        userId: z.string().min(1),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      return await ctx.db
-        .select()
-        .from(chats)
-        .where(and(eq(chats.userId, input.userId), eq(chats.active, false)));
-    }),
 });
