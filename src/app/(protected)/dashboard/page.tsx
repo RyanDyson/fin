@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Navbar } from "@/components/global/navbar";
 import { api } from "@/trpc/react";
+import { authClient } from "@/server/better-auth/client";
 import { useRouter } from "next/navigation";
 import { Upload, X } from "lucide-react";
 import {
@@ -53,6 +54,7 @@ type CourseDraft = {
 
 export default function Page() {
   const router = useRouter();
+  const { data: sessionData } = authClient.useSession();
   const [localCourses, setLocalCourses] = useState<Course[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBrainrotOpen, setIsBrainrotOpen] = useState(false);
@@ -61,12 +63,23 @@ export default function Page() {
   const [files, setFiles] = useState<File[]>([]);
   const [selectedBrainrot, setSelectedBrainrot] = useState<string>("");
   const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
+  // const {
+  //   data: dbCourses,
+  //   isLoading: isCoursesLoading,
+  //   error: coursesError,
+  // } = api.get.getCourse.useQuery(
+  //   { user_id: sessionData?.user.id ?? "" },
+  //   { enabled: Boolean(sessionData?.user.id) },
+  // );
   const {
     data: dbCourses,
     isLoading: isCoursesLoading,
     error: coursesError,
-  } = api.course.list.useQuery();
-  const { data: dbBrainrots } = api.brainrot.list.useQuery();
+  } = api.get.getCourse.useQuery(
+    { user_id: sessionData?.user.id ?? "" },
+    { enabled: true }
+  );
+  const { data: dbBrainrots } = api.get.getBrainrot.useQuery();
 
   const brainrotOptions = useMemo<BrainrotOption[]>(
     () =>
@@ -136,11 +149,11 @@ export default function Page() {
     const fetchedCourses: Course[] = (dbCourses ?? []).map((course) => ({
       id: course.id,
       name: course.title,
-      description: course.description,
-      fileCount: course.fileCount,
-      brainrot: course.brainrotName,
-      completedObjectives: course.completedObjectives,
-      totalObjectives: course.totalObjectives,
+      description: course.description ?? "",
+      fileCount: 0,
+      brainrot: course.brainrot,
+      completedObjectives: 0,
+      totalObjectives: 0,
       createdAt: course.createdAt ? new Date(course.createdAt) : new Date(),
     }));
 
