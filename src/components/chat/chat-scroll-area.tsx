@@ -11,7 +11,8 @@ export function ChatScrollArea({ uuid }: { uuid: string }) {
   const { messages } = useChat(uuid);
 
   return (
-    <ScrollArea className="flex max-h-full flex-col space-y-4 gap-y-4 overflow-scroll px-8">
+    <ScrollArea className="mb-0 flex max-h-full flex-col space-y-4 gap-y-4 overflow-x-hidden px-32 pb-0">
+      <div className="h-16" />
       {messages?.map((message) => (
         <MessageBubble
           key={message.id}

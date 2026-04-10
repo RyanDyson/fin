@@ -28,6 +28,116 @@ export function useChat(uuid: string) {
       role: MessageRole.ASSISTANT,
       createdAt: new Date(Date.now() - 15000),
     },
+    {
+      id: "mock-msg-1",
+      chat_id: uuid,
+      content: "Hello! I am your AI assistant. How can I help you today?",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 60000),
+    },
+    {
+      id: "mock-msg-2",
+      chat_id: uuid,
+      content: "I need some help planning my courses.",
+      role: MessageRole.USER,
+      createdAt: new Date(Date.now() - 30000),
+    },
+    {
+      id: "mock-msg-3",
+      chat_id: uuid,
+      content:
+        "Sure, I can help with that. What kind of courses are you interested in? Here is an example of a list:\n- Math\n- Science\n- Computer Science",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 15000),
+    },
+    {
+      id: "mock-msg-1",
+      chat_id: uuid,
+      content: "Hello! I am your AI assistant. How can I help you today?",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 60000),
+    },
+    {
+      id: "mock-msg-2",
+      chat_id: uuid,
+      content: "I need some help planning my courses.",
+      role: MessageRole.USER,
+      createdAt: new Date(Date.now() - 30000),
+    },
+    {
+      id: "mock-msg-3",
+      chat_id: uuid,
+      content:
+        "Sure, I can help with that. What kind of courses are you interested in? Here is an example of a list:\n- Math\n- Science\n- Computer Science",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 15000),
+    },
+    {
+      id: "mock-msg-1",
+      chat_id: uuid,
+      content: "Hello! I am your AI assistant. How can I help you today?",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 60000),
+    },
+    {
+      id: "mock-msg-2",
+      chat_id: uuid,
+      content: "I need some help planning my courses.",
+      role: MessageRole.USER,
+      createdAt: new Date(Date.now() - 30000),
+    },
+    {
+      id: "mock-msg-3",
+      chat_id: uuid,
+      content:
+        "Sure, I can help with that. What kind of courses are you interested in? Here is an example of a list:\n- Math\n- Science\n- Computer Science",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 15000),
+    },
+    {
+      id: "mock-msg-1",
+      chat_id: uuid,
+      content: "Hello! I am your AI assistant. How can I help you today?",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 60000),
+    },
+    {
+      id: "mock-msg-2",
+      chat_id: uuid,
+      content: "I need some help planning my courses.",
+      role: MessageRole.USER,
+      createdAt: new Date(Date.now() - 30000),
+    },
+    {
+      id: "mock-msg-3",
+      chat_id: uuid,
+      content:
+        "Sure, I can help with that. What kind of courses are you interested in? Here is an example of a list:\n- Math\n- Science\n- Computer Science",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 15000),
+    },
+    {
+      id: "mock-msg-1",
+      chat_id: uuid,
+      content: "Hello! I am your AI assistant. How can I help you today?",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 60000),
+    },
+    {
+      id: "mock-msg-2",
+      chat_id: uuid,
+      content: "I need some help planning my courses.",
+      role: MessageRole.USER,
+      createdAt: new Date(Date.now() - 30000),
+    },
+    {
+      id: "mock-msg-3",
+      chat_id: uuid,
+      content:
+        "Sure, I can help with that. What kind of courses are you interested in? Here is an example of a list:\n- Math\n- Science\n- Computer Science",
+      role: MessageRole.ASSISTANT,
+      createdAt: new Date(Date.now() - 15000),
+    },
   ]);
 
   const sendMessage = useCallback(() => {
@@ -39,7 +149,7 @@ export function useChat(uuid: string) {
       id: Math.random().toString(36).substring(7),
       chat_id: uuid,
       content: input,
-      role: "user",
+      role: MessageRole.USER,
       createdAt: new Date(),
     };
 
@@ -52,7 +162,7 @@ export function useChat(uuid: string) {
         id: Math.random().toString(36).substring(7),
         chat_id: uuid,
         content: `This is a simulated response to: "${newUserMsg.content}"`,
-        role: "assistant",
+        role: MessageRole.ASSISTANT,
         createdAt: new Date(),
       };
 
