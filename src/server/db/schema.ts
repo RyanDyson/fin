@@ -1,12 +1,4 @@
-import { relations } from "drizzle-orm";
-import {
-  boolean,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  integer,
-} from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -104,6 +96,9 @@ export const chats = pgTable("chats", {
   active: boolean("active")
     .$defaultFn(() => false)
     .notNull(),
+  completedObjectives: text("completed_objectives")
+    .notNull()
+    .references(() => objectives.id, { onDelete: "cascade" }),
 });
 
 export const messages = pgTable("messages", {
@@ -126,16 +121,3 @@ export const twoFactor = pgTable("two_factor", {
   secret: text("secret").notNull(),
   backupCodes: text("backup_codes").notNull(),
 });
-
-export const userRelations = relations(user, ({ many }) => ({
-  account: many(account),
-  session: many(session),
-}));
-
-export const accountRelations = relations(account, ({ one }) => ({
-  user: one(user, { fields: [account.userId], references: [user.id] }),
-}));
-
-export const sessionRelations = relations(session, ({ one }) => ({
-  user: one(user, { fields: [session.userId], references: [user.id] }),
-}));
