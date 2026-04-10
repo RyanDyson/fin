@@ -31,18 +31,18 @@ import {
 } from "@/components/ui/file-upload";
 
 type Course = {
-  id: string;
+  id: number;
   name: string;
   description: string;
   fileCount: number;
-  brainrot: string;
+  brainrot: number;
   completedObjectives: number;
   totalObjectives: number;
   createdAt: Date;
 };
 
 type BrainrotOption = {
-  id: string;
+  id: number;
   name: string;
 };
 
@@ -56,36 +56,27 @@ export default function Page() {
   const router = useRouter();
   const { data: sessionData } = authClient.useSession();
   const utils = api.useUtils();
-  const [localCourses, setLocalCourses] = useState<Course[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBrainrotOpen, setIsBrainrotOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [selectedBrainrot, setSelectedBrainrot] = useState<string>("");
+  const [selectedBrainrot, setSelectedBrainrot] = useState<number | null>(null);
   const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
-  const testUserId = "";
-  const resolvedUserId = sessionData?.user.id ?? testUserId;
-  // const {
-  //   data: dbCourses,
-  //   isLoading: isCoursesLoading,
-  //   error: coursesError,
-  // } = api.get.getCourse.useQuery(
-  //   { user_id: sessionData?.user.id ?? "" },
-  //   { enabled: Boolean(sessionData?.user.id) },
-  // );
+  const resolvedUserId = sessionData?.user.id ?? "rBji61OyvMYVCetmynej7FDOroGqUDT9";
   const {
     data: dbCourses,
     isLoading: isCoursesLoading,
     error: coursesError,
   } = api.get.getCourse.useQuery(
-    { user_id: resolvedUserId },
-    { enabled: true },
+    { user_id: resolvedUserId ?? "" },
+    { enabled: Boolean(resolvedUserId) },
   );
   const { data: dbBrainrots } = api.get.getBrainrot.useQuery();
   const { mutateAsync: postCourse, isPending: isCreatingCourse } =
     api.post.postCourse.useMutation({
       onSuccess: async () => {
+        if (!resolvedUserId) return;
         await utils.get.getCourse.invalidate({ user_id: resolvedUserId });
       },
     });
@@ -100,7 +91,7 @@ export default function Page() {
   );
 
   useEffect(() => {
-    if (!selectedBrainrot && brainrotOptions.length > 0) {
+    if (selectedBrainrot === null && brainrotOptions.length > 0) {
       setSelectedBrainrot(brainrotOptions[0].id);
     }
   }, [brainrotOptions, selectedBrainrot]);
@@ -131,20 +122,19 @@ export default function Page() {
   }
 
   async function handleConfirmBrainrot() {
-    if (!draftCourse || !selectedBrainrotOption) return;
+    if (!draftCourse || !selectedBrainrotOption || !resolvedUserId) return;
 
     await postCourse({
       title: draftCourse.name,
       description: draftCourse.description,
       user_id: resolvedUserId,
-      brainrot_id: selectedBrainrotOption.id,
+      brainrot_id: String(selectedBrainrotOption.id),
     });
 
     setName("");
     setDescription("");
     setFiles([]);
     setDraftCourse(null);
-    setLocalCourses([]);
     setIsBrainrotOpen(false);
   }
 
@@ -160,8 +150,8 @@ export default function Page() {
       createdAt: course.createdAt ? new Date(course.createdAt) : new Date(),
     }));
 
-    return [...localCourses, ...fetchedCourses];
-  }, [dbCourses, localCourses]);
+    return fetchedCourses;
+  }, [dbCourses]);
 
   function getProgressPercent(course: Course) {
     if (course.totalObjectives <= 0) return 0;
