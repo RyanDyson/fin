@@ -105,9 +105,9 @@ export const files = pgTable("files", {
 
 export const chats = pgTable("chats", {
   id: text("id").primaryKey(),
-  userId: text("user_id")
+  courseId: text("course_id")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => courses.id, { onDelete: "cascade" }),
   active: boolean("active")
     .$defaultFn(() => false)
     .notNull(),
