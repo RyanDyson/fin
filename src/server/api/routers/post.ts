@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
   brainrot,
@@ -27,15 +28,19 @@ export const postRouter = createTRPCRouter({
         title: z.string().min(1),
         description: z.string().nullable().optional(),
         user_id: z.string().min(1),
+        brainrot_id: z.string().min(1),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const [defaultBrainrot] = await ctx.db.select().from(brainrot).limit(1);
+      const [selectedBrainrot] = await ctx.db
+        .select({ id: brainrot.id })
+        .from(brainrot)
+        .where(eq(brainrot.id, input.brainrot_id));
 
-      if (!defaultBrainrot) {
+      if (!selectedBrainrot) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "No brainrot record exists. Create one before posting a course.",
+          message: "Selected brainrot does not exist.",
         });
       }
 
@@ -46,7 +51,7 @@ export const postRouter = createTRPCRouter({
           title: input.title,
           description: input.description ?? null,
           user_id: input.user_id,
-          brainrot: defaultBrainrot.id,
+          brainrot: input.brainrot_id,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -118,5 +123,4 @@ export const postRouter = createTRPCRouter({
 
       return chat;
     }),
-
 });

@@ -55,6 +55,7 @@ type CourseDraft = {
 export default function Page() {
   const router = useRouter();
   const { data: sessionData } = authClient.useSession();
+  const utils = api.useUtils();
   const [localCourses, setLocalCourses] = useState<Course[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBrainrotOpen, setIsBrainrotOpen] = useState(false);
@@ -63,6 +64,8 @@ export default function Page() {
   const [files, setFiles] = useState<File[]>([]);
   const [selectedBrainrot, setSelectedBrainrot] = useState<string>("");
   const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
+  const testUserId = "rBji61OyvMYVCetmynej7FDOroGqUDT9";
+  const resolvedUserId = sessionData?.user.id ?? testUserId;
   // const {
   //   data: dbCourses,
   //   isLoading: isCoursesLoading,
@@ -76,10 +79,16 @@ export default function Page() {
     isLoading: isCoursesLoading,
     error: coursesError,
   } = api.get.getCourse.useQuery(
-    { user_id: sessionData?.user.id ?? "" },
-    { enabled: true }
+    { user_id: resolvedUserId },
+    { enabled: true },
   );
   const { data: dbBrainrots } = api.get.getBrainrot.useQuery();
+  const { mutateAsync: postCourse, isPending: isCreatingCourse } =
+    api.post.postCourse.useMutation({
+      onSuccess: async () => {
+        await utils.get.getCourse.invalidate({ user_id: resolvedUserId });
+      },
+    });
 
   const brainrotOptions = useMemo<BrainrotOption[]>(
     () =>
@@ -121,27 +130,21 @@ export default function Page() {
     setIsBrainrotOpen(true);
   }
 
-  function handleConfirmBrainrot() {
-    if (!draftCourse) return;
+  async function handleConfirmBrainrot() {
+    if (!draftCourse || !selectedBrainrotOption) return;
 
-    setLocalCourses((current) => [
-      {
-        id: crypto.randomUUID(),
-        name: draftCourse.name,
-        description: draftCourse.description,
-        fileCount: draftCourse.files.length,
-        brainrot: selectedBrainrotOption?.name ?? "Unknown",
-        completedObjectives: 0,
-        totalObjectives: 10,
-        createdAt: new Date(),
-      },
-      ...current,
-    ]);
+    await postCourse({
+      title: draftCourse.name,
+      description: draftCourse.description,
+      user_id: resolvedUserId,
+      brainrot_id: selectedBrainrotOption.id,
+    });
 
     setName("");
     setDescription("");
     setFiles([]);
     setDraftCourse(null);
+    setLocalCourses([]);
     setIsBrainrotOpen(false);
   }
 
@@ -418,9 +421,9 @@ export default function Page() {
               </Button>
               <Button
                 onClick={handleConfirmBrainrot}
-                disabled={!selectedBrainrotOption}
+                disabled={!selectedBrainrotOption || isCreatingCourse}
               >
-                Create course
+                {isCreatingCourse ? "Creating..." : "Create course"}
               </Button>
             </CardFooter>
           </Card>
