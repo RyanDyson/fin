@@ -8,26 +8,14 @@ import {
   files,
   objectives,
 } from "@/server/db/schema";
-import {
-  createTRPCRouter,
-  publicProcedure,
-} from "@/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 export const postRouter = createTRPCRouter({
-  hello: publicProcedure
-    .input(z.object({ text: z.string() }))
-    .query(({ input }) => {
-      return {
-        greeting: `Hello ${input.text}`,
-      };
-    }),
-
-  postCourse: publicProcedure
+  postCourse: protectedProcedure
     .input(
       z.object({
         title: z.string().min(1),
         description: z.string().nullable().optional(),
-        user_id: z.string().min(1),
         brainrot_id: z.number().int().positive(),
       }),
     )
@@ -36,11 +24,13 @@ export const postRouter = createTRPCRouter({
         .select({ id: brainrot.id })
         .from(brainrot)
         .where(eq(brainrot.id, input.brainrot_id));
+      const { id: userId } = ctx.session.user;
 
       if (!selectedBrainrot) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "Selected brainrot does not exist.",
+          message:
+            "No brainrot record exists. Create one before posting a course.",
         });
       }
 
@@ -49,7 +39,7 @@ export const postRouter = createTRPCRouter({
         .values({
           title: input.title,
           description: input.description ?? null,
-          user_id: input.user_id,
+          user_id: userId,
           brainrot: input.brainrot_id,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -59,7 +49,7 @@ export const postRouter = createTRPCRouter({
       return course;
     }),
 
-  postObjectives: publicProcedure
+  postObjectives: protectedProcedure
     .input(
       z.object({
         course_id: z.number().int().positive(),
@@ -80,7 +70,7 @@ export const postRouter = createTRPCRouter({
       return objective;
     }),
 
-  postorUploadFiles: publicProcedure
+  postOrUploadFiles: protectedProcedure
     .input(
       z.object({
         course_id: z.number().int().positive(),
@@ -99,11 +89,11 @@ export const postRouter = createTRPCRouter({
       return file;
     }),
 
-  postSession: publicProcedure
+  postSession: protectedProcedure
     .input(
       z.object({
         courseId: z.number().int().positive(),
-        completedObjectiveId: z.number().int().positive().optional(),
+        completedObjectiveId: z.number().int().positive(),
         active: z.boolean().optional(),
       }),
     )

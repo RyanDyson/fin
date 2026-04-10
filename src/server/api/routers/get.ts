@@ -1,155 +1,95 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import {
-  brainrot,
-  chats,
-  courses,
-  files,
-  objectives,
-} from "@/server/db/schema";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { brainrot, chats, courses, objectives } from "@/server/db/schema";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 export const getRouter = createTRPCRouter({
-  getSecretMessage: publicProcedure.query(() => {
+  getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
   }),
 
-  getCourse: publicProcedure
-    .input(
-      z.object({
-        user_id: z.string().min(1),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      return await ctx.db
-        .select()
-        .from(courses)
-        .where(eq(courses.user_id, input.user_id));
-    }),
+  getCourses: protectedProcedure.query(async ({ ctx }) => {
+    const { id } = ctx.session.user;
+    return await ctx.db.select().from(courses).where(eq(courses.user_id, id));
+  }),
 
-  getCourseById: publicProcedure
-    .input(
-      z.object({
-        user_id: z.string().min(1),
-        course_id: z.number().int().positive(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const [course] = await ctx.db
-        .select()
-        .from(courses)
-        .where(
-          and(
-            eq(courses.id, input.course_id),
-            eq(courses.user_id, input.user_id),
-          ),
-        );
-
-      if (!course) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Course not found.",
-        });
-      }
-
-      return course;
-    }),
-
-  getObjectives: publicProcedure
+  getObjectives: protectedProcedure
     .input(
       z.object({
         objective_id: z.number().int().positive(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      const [objective] = await ctx.db
+      const [result] = await ctx.db
         .select()
         .from(objectives)
-        .where(eq(objectives.id, input.objective_id));
+        .innerJoin(courses, eq(objectives.course_id, courses.id))
+        .where(
+          and(
+            eq(objectives.id, input.objective_id),
+            eq(courses.user_id, ctx.session.user.id),
+          ),
+        );
 
-      if (!objective) {
+      if (!result) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Objective not found.",
         });
       }
 
-      return objective;
+      return result.objectives;
     }),
 
-  getCourseObjectives: publicProcedure
+  getDoneObjectives: protectedProcedure
     .input(
       z.object({
-        course_id: z.number().int().positive(),
+        course_id: z.number().int().positive().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      return await ctx.db
+      const conditions = [
+        eq(objectives.isDone, true),
+        eq(courses.user_id, ctx.session.user.id),
+      ];
+
+      if (input.course_id) {
+        conditions.push(eq(objectives.course_id, input.course_id));
+      }
+
+      const results = await ctx.db
         .select()
         .from(objectives)
-        .where(eq(objectives.course_id, input.course_id));
+        .innerJoin(courses, eq(objectives.course_id, courses.id))
+        .where(and(...conditions));
+
+      return results.map((r) => r.objectives);
     }),
 
-  getCourseFiles: publicProcedure
-    .input(
-      z.object({
-        course_id: z.number().int().positive(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      return await ctx.db
-        .select()
-        .from(files)
-        .where(eq(files.course_id, input.course_id));
-    }),
-
-//   getChats: publicProcedure
-//     .input(
-//       z.object({
-//         courseId: z.number().int().positive(),
-//       }),
-//     )
-//     .query(async ({ ctx, input }) => {
-//       return await ctx.db
-//         .select()
-//         .from(chats)
-//         .where(
-//           and(eq(chats.courseId, input.courseId), eq(chats.active, false)),
-//         );
-//     }),
-
-  getActiveChat: publicProcedure
+  getChats: protectedProcedure
     .input(
       z.object({
         courseId: z.number().int().positive(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      const [chat] = await ctx.db
+      const results = await ctx.db
         .select()
         .from(chats)
-        .where(and(eq(chats.courseId, input.courseId), eq(chats.active, true)));
-
-      return chat ?? null;
-    }),
-
-  getChatHistory: publicProcedure
-    .input(
-      z.object({
-        courseId: z.number().int().positive(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      return await ctx.db
-        .select()
-        .from(chats)
+        .innerJoin(courses, eq(chats.courseId, courses.id))
         .where(
-          and(eq(chats.courseId, input.courseId), eq(chats.active, false)),
+          and(
+            eq(chats.courseId, input.courseId),
+            eq(chats.active, false),
+            eq(courses.user_id, ctx.session.user.id),
+          ),
         );
+
+      return results.map((r) => r.chats);
     }),
 
-  getBrainrot: publicProcedure.query(async ({ ctx }) => {
+  getBrainrot: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.db.select().from(brainrot);
   }),
 });
