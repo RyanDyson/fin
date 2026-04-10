@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Whitelist Web Guard Settings</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="options-page">
+    <main class="container">
+      <h1>Whitelist Web Guard</h1>
+      <p class="subtitle">Block everything except your approved domains.</p>
+
+      <section class="card">
+        <h2>Web Blocking</h2>
+        <label class="checkbox-row">
+          <input id="blockEnabled" type="checkbox" />
+          <span>Enable website blocking</span>
+        </label>
+        <p>Turn this off to temporarily allow all sites.</p>
+      </section>
+
+      <section class="card">
+        <h2>Allowed Domains</h2>
+        <p>One domain per line, or comma-separated.</p>
+        <textarea id="whitelist" rows="8" spellcheck="false"></textarea>
+      </section>
+
+      <section class="card">
+        <h2>Remote Sync (optional)</h2>
+        <label class="checkbox-row">
+          <input id="remoteEnabled" type="checkbox" />
+          <span>Enable periodic sync from backend API</span>
+        </label>
+
+        <label class="field-label" for="remoteUrl">Remote URL</label>
+        <input id="remoteUrl" type="url" placeholder="https://api.example.com/whitelist" />
+
+        <label class="field-label" for="remoteApiKey">API Key (Bearer token)</label>
+        <input id="remoteApiKey" type="password" placeholder="Optional" />
+
+        <label class="field-label" for="syncIntervalMinutes">Sync Interval (minutes, min 5)</label>
+        <input id="syncIntervalMinutes" type="number" min="5" step="1" />
+      </section>
+
+      <section class="actions">
+        <button id="saveBtn" class="primary">Save Settings</button>
+        <button id="syncBtn" type="button">Sync Now</button>
+      </section>
+
+      <section class="card">
+        <h2>Last Sync</h2>
+        <p id="lastSyncAt">-</p>
+        <p id="lastSyncStatus">Not synced yet</p>
+      </section>
+
+      <p id="status" class="status"></p>
+    </main>
+
+    <script src="options.js" type="module"></script>
+  </body>
+</html>
