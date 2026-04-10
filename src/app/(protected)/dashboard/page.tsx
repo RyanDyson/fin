@@ -64,7 +64,7 @@ export default function Page() {
   const [files, setFiles] = useState<File[]>([]);
   const [selectedBrainrot, setSelectedBrainrot] = useState<string>("");
   const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
-  const testUserId = "rBji61OyvMYVCetmynej7FDOroGqUDT9";
+  const testUserId = "";
   const resolvedUserId = sessionData?.user.id ?? testUserId;
   // const {
   //   data: dbCourses,
