@@ -1,0 +1,125 @@
+import { TRPCError } from "@trpc/server";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import { brainrot, courses } from "@/server/db/schema";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+
+export const updateRouter = createTRPCRouter({
+  updateBrainrot: protectedProcedure
+    .input(
+      z.object({
+        course_id: z.number().int().positive(),
+        brainrot_id: z.number().int().positive().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.session) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to update a course.",
+        });
+      }
+      const { id: userId } = ctx.session.user;
+      let targetBrainrotId = input.brainrot_id;
+
+      if (!targetBrainrotId) {
+        const [defaultBrainrot] = await ctx.db.select().from(brainrot).limit(1);
+
+        if (!defaultBrainrot) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "No brainrot record exists. Create one before updating course brainrot.",
+          });
+        }
+
+        targetBrainrotId = defaultBrainrot.id;
+      }
+
+      const [updatedCourse] = await ctx.db
+        .update(courses)
+        .set({
+          brainrot: targetBrainrotId,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(courses.id, input.course_id), eq(courses.user_id, userId)),
+        )
+        .returning();
+
+      if (!updatedCourse) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Course not found for this user.",
+        });
+      }
+
+      return updatedCourse;
+    }),
+
+  updateCourseTitle: protectedProcedure
+    .input(
+      z.object({
+        user_id: z.string().min(1),
+        course_id: z.number().int().positive(),
+        title: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [updatedCourse] = await ctx.db
+        .update(courses)
+        .set({
+          title: input.title,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(courses.id, input.course_id),
+            eq(courses.user_id, input.user_id),
+          ),
+        )
+        .returning();
+
+      if (!updatedCourse) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Course not found for this user.",
+        });
+      }
+
+      return updatedCourse;
+    }),
+
+  updateCourseDecription: protectedProcedure
+    .input(
+      z.object({
+        user_id: z.string().min(1),
+        course_id: z.number().int().positive(),
+        description: z.string().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [updatedCourse] = await ctx.db
+        .update(courses)
+        .set({
+          description: input.description,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(courses.id, input.course_id),
+            eq(courses.user_id, input.user_id),
+          ),
+        )
+        .returning();
+
+      if (!updatedCourse) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Course not found for this user.",
+        });
+      }
+
+      return updatedCourse;
+    }),
+});
