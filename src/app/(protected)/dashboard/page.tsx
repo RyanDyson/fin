@@ -35,7 +35,7 @@ type Course = {
   name: string;
   description: string;
   fileCount: number;
-  brainrot: number;
+  brainrot: string;
   completedObjectives: number;
   totalObjectives: number;
   createdAt: Date;
@@ -104,6 +104,12 @@ export default function Page() {
     [brainrotOptions, selectedBrainrot],
   );
 
+  const brainrotNameById = useMemo(
+    () =>
+      new Map((dbBrainrots ?? []).map((option) => [String(option.id), option.name])),
+    [dbBrainrots],
+  );
+
   const canCreate = useMemo(
     () => name.trim().length > 0 && description.trim().length > 0,
     [name, description],
@@ -144,14 +150,16 @@ export default function Page() {
       name: course.title,
       description: course.description ?? "",
       fileCount: 0,
-      brainrot: course.brainrot,
+      brainrot:
+        brainrotNameById.get(String(course.brainrot)) ??
+        `Brainrot ${course.brainrot}`,
       completedObjectives: 0,
       totalObjectives: 0,
       createdAt: course.createdAt ? new Date(course.createdAt) : new Date(),
     }));
 
     return fetchedCourses;
-  }, [dbCourses]);
+  }, [brainrotNameById, dbCourses]);
 
   function getProgressPercent(course: Course) {
     if (course.totalObjectives <= 0) return 0;
