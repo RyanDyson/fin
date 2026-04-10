@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { chats, courses, objectives } from "@/server/db/schema";
+import { brainrot, chats, courses, objectives } from "@/server/db/schema";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 
 export const getRouter = createTRPCRouter({
@@ -25,7 +25,7 @@ export const getRouter = createTRPCRouter({
 	getObjectives: publicProcedure
 		.input(
 			z.object({
-				objective_id: z.string().min(1),
+				objective_id: z.number().int().positive(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -44,10 +44,10 @@ export const getRouter = createTRPCRouter({
 			return objective;
 		}),
 
-	getSession: publicProcedure
+	getChats: publicProcedure
 		.input(
 			z.object({
-				courseId: z.string().min(1),
+				courseId: z.number().int().positive(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -55,5 +55,10 @@ export const getRouter = createTRPCRouter({
 				.select()
 				.from(chats)
 				.where(and(eq(chats.courseId, input.courseId), eq(chats.active, false)));
+		}),
+
+	getBrainrot: publicProcedure
+		.query(async ({ ctx }) => {
+			return await ctx.db.select().from(brainrot);
 		}),
 });
