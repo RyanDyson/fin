@@ -21,8 +21,43 @@ type Course = {
   name: string;
   description: string;
   files: File[];
+  brainrot: string;
   createdAt: Date;
 };
+
+type CourseDraft = {
+  name: string;
+  description: string;
+  files: File[];
+};
+
+const brainrotOptions = [
+  {
+    id: "skibidi-scholar",
+    name: "Skibidi Scholar",
+    // vibe: "Asks chaotic but surprisingly smart follow-ups.",
+  },
+  {
+    id: "sigma-tutor",
+    name: "Sigma Tutor",
+    // vibe: "Calm, direct, and focused on precision.",
+  },
+  {
+    id: "rizz-analyst",
+    name: "Rizz Analyst",
+    // vibe: "Turns dry explanations into confident takes.",
+  },
+  {
+    id: "delulu-debater",
+    name: "Delulu Debater",
+    // vibe: "Challenges logic with wild what-if scenarios.",
+  },
+  {
+    id: "npc-challenger",
+    name: "NPC Challenger",
+    // vibe: "Plays naive to expose weak explanations.",
+  },
+] as const;
 
 const initialCourses: Course[] = [
   {
@@ -31,6 +66,7 @@ const initialCourses: Course[] = [
     description:
       "Learn by teaching an assistant LLM while another model grades your reasoning step-by-step.",
     files: [],
+    brainrot: "Sigma Tutor",
     createdAt: new Date("2026-03-15"),
   },
   {
@@ -39,6 +75,7 @@ const initialCourses: Course[] = [
     description:
       "Practice explaining arrays, trees, and graphs in simple language to build true mastery.",
     files: [],
+    brainrot: "NPC Challenger",
     createdAt: new Date("2026-03-28"),
   },
 ];
@@ -46,9 +83,21 @@ const initialCourses: Course[] = [
 export default function Page() {
   const [courses, setCourses] = useState<Course[]>(initialCourses);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isBrainrotOpen, setIsBrainrotOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [selectedBrainrot, setSelectedBrainrot] = useState<string>(
+    brainrotOptions[0].id,
+  );
+  const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
+
+  const selectedBrainrotOption = useMemo(
+    () =>
+      brainrotOptions.find((option) => option.id === selectedBrainrot) ??
+      brainrotOptions[0],
+    [selectedBrainrot],
+  );
 
   const canCreate = useMemo(
     () => name.trim().length > 0 && description.trim().length > 0,
@@ -58,12 +107,25 @@ export default function Page() {
   function handleCreateCourse() {
     if (!canCreate) return;
 
+    setDraftCourse({
+      name: name.trim(),
+      description: description.trim(),
+      files,
+    });
+    setIsCreateOpen(false);
+    setIsBrainrotOpen(true);
+  }
+
+  function handleConfirmBrainrot() {
+    if (!draftCourse) return;
+
     setCourses((current) => [
       {
         id: crypto.randomUUID(),
-        name: name.trim(),
-        description: description.trim(),
-        files,
+        name: draftCourse.name,
+        description: draftCourse.description,
+        files: draftCourse.files,
+        brainrot: selectedBrainrotOption.name,
         createdAt: new Date(),
       },
       ...current,
@@ -72,7 +134,8 @@ export default function Page() {
     setName("");
     setDescription("");
     setFiles([]);
-    setIsCreateOpen(false);
+    setDraftCourse(null);
+    setIsBrainrotOpen(false);
   }
 
   return (
@@ -98,10 +161,12 @@ export default function Page() {
               </CardHeader>
 
               <CardContent className="flex items-center justify-between">
-                <span className="text-muted-foreground text-xs">
-                  {course.files.length} material
-                  {course.files.length === 1 ? "" : "s"}
-                </span>
+                <div className="space-y-1">
+                  <span className="text-muted-foreground block text-xs">
+                    {course.files.length} file
+                    {course.files.length === 1 ? "" : "s"}
+                  </span>
+                </div>
                 <span className="text-muted-foreground text-xs">
                   {course.createdAt.toLocaleDateString()}
                 </span>
@@ -186,8 +251,74 @@ export default function Page() {
                 Cancel
               </Button>
               <Button onClick={handleCreateCourse} disabled={!canCreate}>
-                Create course
+                Next Step
               </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      ) : null}
+
+      {isBrainrotOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-black/45 p-4 backdrop-blur-[2px] sm:items-center sm:justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="choose-brainrot-title"
+        >
+          <Card className="border-border/60 w-full max-w-xl gap-4">
+            <CardHeader>
+              <CardTitle id="choose-brainrot-title">
+                Choose your brainrot
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="p-4">
+                <div className="mt-2 flex flex-col items-center gap-3 text-center">
+                  <div className="bg-muted text-muted-foreground flex aspect-square items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
+                    placeholder
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">
+                      {selectedBrainrotOption.name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {brainrotOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={selectedBrainrot === option.id}
+                    onClick={() => setSelectedBrainrot(option.id)}
+                    className={`rounded-lg border p-3 text-left transition ${
+                      selectedBrainrot === option.id
+                        ? "border-primary ring-primary/30 bg-primary/5 ring-2"
+                        : "hover:border-primary/40 border-border"
+                    }`}
+                  >
+                    <div className="bg-muted text-muted-foreground mx-auto flex aspect-square w-20 items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
+                      placeholder
+                    </div>
+                    <p className="mt-3 text-sm font-semibold">{option.name}</p>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+
+            <CardFooter className="justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setIsBrainrotOpen(false);
+                  setIsCreateOpen(true);
+                }}
+              >
+                Back
+              </Button>
+              <Button onClick={handleConfirmBrainrot}>Create course</Button>
             </CardFooter>
           </Card>
         </div>
