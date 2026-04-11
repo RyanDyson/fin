@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import Image from "next/image";
+import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +17,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { UploadArea } from "./upload-area";
+
+const BRAINROT_IMAGE_MAP: Record<string, string> = {
+  "Chimpanzini Bananini": "/img/brainrot_profile/chimpanzini_bananini.png",
+  "Balerinna Cappucinna": "/img/brainrot_profile/balerinna_cappucinna.webp",
+  "Brr Brr Patapim": "/img/brainrot_profile/brr_brr_patapim.webp",
+  "Trippi Troppi": "/img/brainrot_profile/trippi_troppi.webp",
+  "Tung Tung": "/img/brainrot_profile/tung_tung.webp",
+};
+
+function getBrainrotImage(name?: string) {
+  if (!name) return null;
+  return BRAINROT_IMAGE_MAP[name] ?? null;
+}
 
 export interface BrainrotOption {
   id: number;
@@ -48,6 +63,15 @@ export function CreateCourseDialog({
   isCreating,
   brainrotOptions,
 }: CreateCourseDialogProps) {
+  // Always put 'Normal' first
+  const sortedBrainrotOptions = useMemo(() => {
+    return [...brainrotOptions].sort((a, b) => {
+      if (a.name === "Normal") return -1;
+      if (b.name === "Normal") return 1;
+      return 0;
+    });
+  }, [brainrotOptions]);
+
   const [step, setStep] = useState<Steps>(Steps.DETAILS);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -61,9 +85,11 @@ export function CreateCourseDialog({
       setName("");
       setDescription("");
       setFiles([]);
-      setSelectedBrainrot(brainrotOptions[0]?.id ?? null);
+      // Always select 'Normal' if present, else first
+      const normal = sortedBrainrotOptions.find((b) => b.name === "Normal");
+      setSelectedBrainrot(normal?.id ?? sortedBrainrotOptions[0]?.id ?? null);
     }
-  }, [isOpen, brainrotOptions]);
+  }, [isOpen, sortedBrainrotOptions]);
 
   const canGoNext = name.trim() !== "" && files.length > 0;
 
@@ -84,13 +110,14 @@ export function CreateCourseDialog({
     }
   };
 
-  const selectedOption = brainrotOptions.find(
+  const selectedOption = sortedBrainrotOptions.find(
     (opt) => opt.id === selectedBrainrot,
   );
+  const selectedOptionImage = getBrainrotImage(selectedOption?.name);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-fit min-w-fit max-w-none gap-0 overflow-hidden p-0 sm:rounded-3xl">
+      <DialogContent className="w-fit max-w-none min-w-fit gap-0 overflow-hidden p-0 sm:rounded-3xl">
         {step === Steps.DETAILS ? (
           <>
             {/* Step 1: Course Details */}
@@ -160,8 +187,18 @@ export function CreateCourseDialog({
 
             <div className="p-6">
               <div className="mb-8 flex flex-col items-center gap-3 text-center">
-                <div className="bg-muted text-muted-foreground flex aspect-square h-24 w-24 items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
-                  placeholder
+                <div className="flex aspect-square h-24 w-24 items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
+                  {selectedOptionImage ? (
+                    <Image
+                      src={selectedOptionImage}
+                      alt={selectedOption?.name ?? "Selected brainrot"}
+                      width={96}
+                      height={96}
+                      className="h-full w-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <User className="text-muted-foreground h-12 w-12" />
+                  )}
                 </div>
                 <div>
                   <p className="text-base font-semibold">
@@ -171,25 +208,38 @@ export function CreateCourseDialog({
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {brainrotOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    aria-pressed={selectedBrainrot === option.id}
-                    onClick={() => setSelectedBrainrot(option.id)}
-                    className={cn(
-                      "rounded-xl border p-4 text-center transition-all",
-                      selectedBrainrot === option.id
-                        ? "border-primary ring-primary/30 bg-primary/5 ring-2"
-                        : "hover:border-primary/40 border-border",
-                    )}
-                  >
-                    <div className="bg-muted text-muted-foreground mx-auto mb-3 flex aspect-square w-16 items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
-                      img
-                    </div>
-                    <p className="text-sm font-semibold">{option.name}</p>
-                  </button>
-                ))}
+                {sortedBrainrotOptions.map((option) => {
+                  const optionImage = getBrainrotImage(option.name);
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={selectedBrainrot === option.id}
+                      onClick={() => setSelectedBrainrot(option.id)}
+                      className={cn(
+                        "rounded-xl border p-4 text-center transition-all",
+                        selectedBrainrot === option.id
+                          ? "border-primary ring-primary/30 bg-primary/5 ring-2"
+                          : "hover:border-primary/40 border-border",
+                      )}
+                    >
+                      <div className="mx-auto mb-3 flex aspect-square w-16 items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
+                        {optionImage ? (
+                          <Image
+                            src={optionImage}
+                            alt={option.name}
+                            width={64}
+                            height={64}
+                            className="h-full w-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="text-muted-foreground h-8 w-8" />
+                        )}
+                      </div>
+                      <p className="text-sm font-semibold">{option.name}</p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
