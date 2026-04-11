@@ -21,8 +21,11 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
+  "menuColor": "default-translucent",
+  "menuAccent": "subtle",
   "registries": {
     "@shadcnblocks": "https://shadcnblocks.com/r/{name}.json",
-    "@diceui": "https://diceui.com/r/{name}.json"
+    "@diceui": "https://diceui.com/r/{name}.json",
+    "@reui": "https://reui.io/r/{style}/{name}.json"
   }
 }

@@ -57,7 +57,7 @@ const mockObjectives: Objective[] = [
   },
 ];
 
-export function ProgressDropdown() {
+export function ProgressDropdown({ inline }: { inline?: boolean } = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [objectives] = useState<Objective[]>(mockObjectives);
 
@@ -75,10 +75,20 @@ export function ProgressDropdown() {
   const toggleDropdown = () => setIsOpen((prev) => !prev);
 
   return (
-    <div className="absolute right-0 left-0 z-10 mx-auto w-full max-w-2xl px-4 py-4">
+    <div
+      className={cn(
+        "w-full",
+        inline
+          ? "mb-6 w-fit"
+          : "absolute right-0 left-0 z-10 mx-auto max-w-2xl px-4 py-4",
+      )}
+    >
       <motion.div
         layout
-        className="bg-card/60 border-border relative overflow-hidden rounded-2xl border border-t shadow-xs backdrop-blur-lg"
+        className={cn(
+          "bg-card/60 border-border relative overflow-hidden rounded-2xl border border-t shadow-xs backdrop-blur-lg",
+          inline && "bg-card min-w-lg",
+        )}
       >
         <motion.div layout className="absolute top-1 right-2 z-10">
           <Button
@@ -91,7 +101,7 @@ export function ProgressDropdown() {
               animate={{ rotate: isOpen ? 180 : 0 }}
               transition={{ duration: 0.2 }}
             >
-              <CaretDownIcon className="size-4" weight="bold" />
+              <CaretDownIcon className="text-primary size-4" weight="bold" />
             </motion.div>
           </Button>
         </motion.div>
@@ -118,7 +128,7 @@ export function ProgressDropdown() {
                 <div className="flex-1 space-y-1">
                   <p
                     className={cn(
-                      "text-sm leading-none font-medium",
+                      "text-left text-sm leading-none font-medium",
                       objective.status === ObjectiveStatus.Completed
                         ? "text-muted-foreground decoration-muted-foreground/50 line-through"
                         : "text-foreground",
@@ -133,7 +143,7 @@ export function ProgressDropdown() {
         </motion.div>
         <div className="bg-secondary h-1 w-full">
           <motion.div
-            className="from-primary/10 to-primary/80 border-primary h-full border-t bg-linear-to-r"
+            className="from-primary/50 to-primary/80 h-full border-t bg-linear-to-r"
             initial={{ width: 0 }}
             animate={{ width: `${progressPercentage}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
