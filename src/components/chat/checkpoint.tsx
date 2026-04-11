@@ -284,10 +284,10 @@ function GeneratingView({
 
 export function Checkpoint() {
   const [status, setStatus] = useState<CheckpointState>(
-    CheckpointState.Timeout,
+    CheckpointState.Hidden,
   );
-  const [completedObjectives] = useState(2);
-  const [totalObjectives] = useState(4);
+  const [completedObjectives] = useState(0);
+  const [totalObjectives] = useState(0);
 
   const [restMode, setRestMode] = useState<RestMode>(RestMode.None);
   const [restDurationMins, setRestDurationMins] = useState(5);
