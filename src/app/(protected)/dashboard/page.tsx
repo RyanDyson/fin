@@ -34,6 +34,30 @@ type BrainrotOption = {
   name: string;
 };
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result;
+
+      if (typeof result !== "string") {
+        reject(new Error("Could not read file."));
+        return;
+      }
+
+      const [, base64 = ""] = result.split(",");
+      resolve(base64);
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Could not read file."));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Page() {
   const router = useRouter();
   const utils = api.useUtils();
@@ -67,6 +91,9 @@ export default function Page() {
         await utils.get.getCourses.invalidate();
       },
     });
+
+  const { mutateAsync: createCourseWithBackend, isPending: isCreatingBackend } =
+    api.post.createCourseWithBackend.useMutation();
 
   const brainrotOptions = useMemo<BrainrotOption[]>(
     () =>
@@ -243,17 +270,30 @@ export default function Page() {
           isOpen={isCreateOpen}
           onClose={() => setIsCreateOpen(false)}
           onCreate={async (data) => {
-            await postCourse({
+            const course = await postCourse({
               title: data.name,
               description: data.description,
               brainrot_id: data.brainrotId,
             });
 
-            //get objectives
+            await Promise.all(
+              data.files.map(async (file) => {
+                const pdf_file_base64 = await fileToBase64(file);
+
+                return createCourseWithBackend({
+                  course_id: course.id,
+                  pdf_file_base64,
+                  file_name: file.name,
+                  mime_type: file.type || "application/pdf",
+                });
+              }),
+            );
+
+            await utils.get.getCourseProgress.invalidate({ course_id: course.id });
 
             setIsCreateOpen(false);
           }}
-          isCreating={isCreatingCourse}
+          isCreating={isCreatingCourse || isCreatingBackend}
           brainrotOptions={brainrotOptions}
         />
       </div>

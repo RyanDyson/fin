@@ -125,4 +125,54 @@ export const postRouter = createTRPCRouter({
 
       return chat;
     }),
+
+  createCourseWithBackend: protectedProcedure
+    .input(
+      z.object({
+        course_id: z.number().int().positive(),
+        pdf_file_base64: z.string().min(1),
+        file_name: z.string().min(1),
+        mime_type: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const fileBuffer = Buffer.from(input.pdf_file_base64, "base64");
+        const formData = new FormData();
+        formData.append(
+          "pdf_file",
+          new Blob([fileBuffer], {
+            type: input.mime_type ?? "application/pdf",
+          }),
+          input.file_name,
+        );
+
+        const response = await fetch(
+          `http://localhost:8000/create_course/${input.course_id}`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Backend error: ${response.status} ${response.statusText}`,
+          });
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create course on backend: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
+      }
+    }),
 });
