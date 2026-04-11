@@ -9,8 +9,13 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
-export default function ChatPage({ params }: { params: { chatId: string } }) {
-  const { chatId } = params;
+export default function ChatPage({
+  params,
+}: {
+  params: Promise<{ "chat-id": string }>;
+}) {
+  const routeParams = use(params);
+  const chatId = routeParams["chat-id"];
   const [contentSidebarOpen, setContentSidebarOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes mock timer
   const totalTime = 600;

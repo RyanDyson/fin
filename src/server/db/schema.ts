@@ -1,4 +1,11 @@
-import { boolean, pgTable, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export enum MessageRole {
   SYSTEM = "system",
@@ -72,50 +79,54 @@ export const verification = pgTable("verification", {
 });
 
 export const courses = pgTable("courses", {
-  id: text("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: text("title").notNull(),
   description: text("description"),
   createdAt: timestamp("created_at").$defaultFn(() => /* @_PURE_ */ new Date()),
   updatedAt: timestamp("updated_at").$defaultFn(() => /* @_PURE_ */ new Date()),
+  brainrot: integer("brainrot_id")
+    .notNull()
+    .references(() => brainrot.id, { onDelete: "cascade" }),
   user_id: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
 });
 
 export const objectives = pgTable("objectives", {
-  id: text("id").primaryKey(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   content: text("content").notNull(),
+  isDone: boolean("is_done")
+    .$defaultFn(() => false)
+    .notNull(),
   createdAt: timestamp("created_at").$defaultFn(() => /* @_PURE_ */ new Date()),
   updatedAt: timestamp("updated_at").$defaultFn(() => /* @_PURE_ */ new Date()),
-  course_id: text("course_id")
+  course_id: integer("course_id")
     .notNull()
     .references(() => courses.id, { onDelete: "cascade" }),
 });
 
 export const files = pgTable("files", {
-  id: text("id").primaryKey(),
-  course_id: text("course_id")
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  course_id: integer("course_id")
     .notNull()
     .references(() => courses.id, { onDelete: "cascade" }),
   file_url: text("file_url").notNull(),
 });
 
 export const chats = pgTable("chats", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  courseId: integer("course_id")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => courses.id, { onDelete: "cascade" }),
   active: boolean("active")
     .$defaultFn(() => false)
     .notNull(),
-  completedObjectives: text("completed_objectives")
-    .notNull()
-    .references(() => objectives.id, { onDelete: "cascade" }),
+  completedObjectives: integer("completed_objectives").notNull(),
 });
 
 export const messages = pgTable("messages", {
-  id: text("id").primaryKey(),
-  chat_id: text("chat_id")
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  chat_id: integer("chat_id")
     .notNull()
     .references(() => chats.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
@@ -123,6 +134,12 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())
     .notNull(),
+});
+
+export const brainrot = pgTable("brainrot", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  personalityPrompt: text("personality_prompt").notNull(),
 });
 
 export const twoFactor = pgTable("two_factor", {
