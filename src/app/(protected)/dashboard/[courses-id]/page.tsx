@@ -194,12 +194,12 @@ export default function Page({ params }: CoursePageProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
+              {/* <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Progress</span>
                 <span className="font-medium">
                   {objectiveStats.completed}/{objectiveStats.total}
                 </span>
-              </div>
+              </div> */}
               <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
                 <div
                   className="bg-primary h-full rounded-full transition-all"

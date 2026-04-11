@@ -46,6 +46,7 @@ export default function Page() {
   const router = useRouter();
   const { data: sessionData } = authClient.useSession();
   const utils = api.useUtils();
+  const isAuthenticated = Boolean(sessionData?.user?.id);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isBrainrotOpen, setIsBrainrotOpen] = useState(false);
   const [name, setName] = useState("");
@@ -53,18 +54,19 @@ export default function Page() {
   const [files, setFiles] = useState<File[]>([]);
   const [selectedBrainrot, setSelectedBrainrot] = useState<number | null>(null);
   const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
-  const resolvedUserId =
-    sessionData?.user.id ?? "rBji61OyvMYVCetmynej7FDOroGqUDT9";
   const {
     data: dbCourses,
     isLoading: isCoursesLoading,
     error: coursesError,
-  } = api.get.getCourses.useQuery();
-  const { data: dbBrainrots } = api.get.getBrainrot.useQuery();
+  } = api.get.getCourses.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const { data: dbBrainrots } = api.get.getBrainrot.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
   const { mutateAsync: postCourse, isPending: isCreatingCourse } =
     api.post.postCourse.useMutation({
       onSuccess: async () => {
-        if (!resolvedUserId) return;
         await utils.get.getCourses.invalidate();
       },
     });
@@ -118,7 +120,7 @@ export default function Page() {
   }
 
   async function handleConfirmBrainrot() {
-    if (!draftCourse || !selectedBrainrotOption || !resolvedUserId) return;
+    if (!draftCourse || !selectedBrainrotOption || !isAuthenticated) return;
 
     await postCourse({
       title: draftCourse.name,
@@ -176,7 +178,11 @@ export default function Page() {
           </h1>
         </header>
 
-        {isCoursesLoading ? (
+        {!isAuthenticated ? (
+          <p className="text-muted-foreground text-sm">
+            Please sign in to view your courses.
+          </p>
+        ) : isCoursesLoading ? (
           <p className="text-muted-foreground text-sm">Loading courses...</p>
         ) : coursesError ? (
           <p className="text-destructive text-sm">Could not load courses.</p>
