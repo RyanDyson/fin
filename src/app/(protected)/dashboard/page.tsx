@@ -34,6 +34,7 @@ type Course = {
 type BrainrotOption = {
   id: number;
   name: string;
+  image?: string;
 };
 
 type CourseDraft = {
@@ -71,12 +72,23 @@ export default function Page() {
       },
     });
 
+  // Map brainrot id to image filename
+  const brainrotImageMap: Record<string, string> = {
+    "Chimpanzini Bananini": "/img/brainrot_profile/chimpanzini_bananini.png",
+    "Balerinna Cappucinna": "/img/brainrot_profile/balerinna_cappucinna.webp",
+    "Brr Brr Patapim": "/img/brainrot_profile/brr_brr_patapim.webp",
+    "Trippi Troppi": "/img/brainrot_profile/trippi_troppi.webp",
+    "Tung Tung": "/img/brainrot_profile/tung_tung.webp",
+  };
+
+ 
   const brainrotOptions = useMemo<BrainrotOption[]>(
     () =>
       (dbBrainrots ?? []).map((option) => ({
-        id: option.id,
-        name: option.name,
-      })),
+            id: option.id,
+            name: option.name,
+            image: brainrotImageMap[option.name],
+          })),
     [dbBrainrots],
   );
 
@@ -328,12 +340,20 @@ export default function Page() {
             <CardContent className="space-y-4">
               <div className="p-4">
                 <div className="mt-2 flex flex-col items-center gap-3 text-center">
-                  <div className="bg-muted text-muted-foreground flex aspect-square items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
-                    placeholder
-                  </div>
+                  {selectedBrainrotOption?.image ? (
+                    <img
+                      src={selectedBrainrotOption.image}
+                      alt={selectedBrainrotOption.name}
+                      className="bg-muted aspect-square h-24 w-24 rounded-full border object-cover"
+                    />
+                  ) : (
+                    <div className="bg-muted text-muted-foreground flex aspect-square h-24 w-24 items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
+                      ?
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm font-semibold">
-                      {selectedBrainrotOption.name}
+                      {selectedBrainrotOption?.name}
                     </p>
                   </div>
                 </div>
@@ -352,9 +372,17 @@ export default function Page() {
                         : "hover:border-primary/40 border-border"
                     }`}
                   >
-                    <div className="bg-muted text-muted-foreground mx-auto flex aspect-square w-20 items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
-                      placeholder
-                    </div>
+                    {option.image ? (
+                      <img
+                        src={option.image}
+                        alt={option.name}
+                        className="bg-muted mx-auto aspect-square h-20 w-20 rounded-full border object-cover"
+                      />
+                    ) : (
+                      <div className="bg-muted text-muted-foreground mx-auto flex aspect-square h-20 w-20 items-center justify-center rounded-full border text-[10px] font-medium tracking-wide uppercase">
+                        ?
+                      </div>
+                    )}
                     <p className="mt-3 text-sm font-semibold">{option.name}</p>
                   </button>
                 ))}
