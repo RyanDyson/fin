@@ -121,9 +121,13 @@ export function ProgressDropdown({
     }));
   }, [localCompletedObjectiveIds, objectivesQuery.data]);
 
-  const completedCount =
-    progressQuery.data?.completedObjectives ??
-    objectives.filter((obj) => obj.status === ObjectiveStatus.Completed).length;
+  const localCompletedCount = objectives.filter(
+    (obj) => obj.status === ObjectiveStatus.Completed,
+  ).length;
+  const completedCount = Math.max(
+    progressQuery.data?.completedObjectives ?? 0,
+    localCompletedCount,
+  );
   const totalCount =
     progressQuery.data?.totalObjectives ?? objectives.length;
   const progressPercentage =

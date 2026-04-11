@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { use } from "react";
 
 import { AppNavbar } from "@/components/global/app-navbar";
@@ -57,9 +57,14 @@ export default function CourseDashboardPage({
   const router = useRouter();
   const courseId = Number(routeParams["courses-id"]);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [localCompletedObjectiveIds, setLocalCompletedObjectiveIds] = useState<
+    Set<number>
+  >(new Set());
   const [settingTopicObjectiveId, setSettingTopicObjectiveId] = useState<
     number | null
   >(null);
+  const completedStorageKey = `completedObjectives:${courseId}`;
+  const selectedStorageKey = `selectedObjective:${courseId}`;
 
   const courseQuery = api.get.getCourseById.useQuery(
     { course_id: courseId },
@@ -83,6 +88,46 @@ export default function CourseDashboardPage({
 
   const createSessionMutation = api.post.postSession.useMutation();
 
+  useEffect(() => {
+    if (!Number.isFinite(courseId) || typeof window === "undefined") {
+      return;
+    }
+
+    const readLocalCompletion = () => {
+      const rawCompleted = window.localStorage.getItem(completedStorageKey);
+      if (!rawCompleted) {
+        setLocalCompletedObjectiveIds(new Set());
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(rawCompleted) as unknown;
+        const ids = Array.isArray(parsed)
+          ? parsed.filter((value): value is number => Number.isInteger(value))
+          : [];
+        setLocalCompletedObjectiveIds(new Set(ids));
+      } catch {
+        setLocalCompletedObjectiveIds(new Set());
+      }
+    };
+
+    const handleCompletedUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{ courseId?: number }>;
+      if (customEvent.detail?.courseId === courseId) {
+        readLocalCompletion();
+      }
+    };
+
+    readLocalCompletion();
+    window.addEventListener("objective-completed", handleCompletedUpdate);
+    window.addEventListener("storage", readLocalCompletion);
+
+    return () => {
+      window.removeEventListener("objective-completed", handleCompletedUpdate);
+      window.removeEventListener("storage", readLocalCompletion);
+    };
+  }, [completedStorageKey, courseId]);
+
   const objectives = useMemo<Objective[]>(() => {
     const completedIds = new Set(
       (objectivesQuery.data ?? [])
@@ -93,9 +138,11 @@ export default function CourseDashboardPage({
     return (objectivesQuery.data ?? []).map((objective) => ({
       id: objective.id,
       content: objective.content,
-      completed: completedIds.has(objective.id),
+      completed:
+        completedIds.has(objective.id) ||
+        localCompletedObjectiveIds.has(objective.id),
     }));
-  }, [objectivesQuery.data]);
+  }, [localCompletedObjectiveIds, objectivesQuery.data]);
 
   const chats = useMemo<ChatHistoryItem[]>(() => {
     return (chatsQuery.data ?? []).map((chat) => ({
@@ -114,6 +161,9 @@ export default function CourseDashboardPage({
 
     try {
       setSettingTopicObjectiveId(objectiveId);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(selectedStorageKey, String(objectiveId));
+      }
 
       const response = await fetch(
         `http://localhost:8000/message/explain/set-topic/${courseId}`,
@@ -247,12 +297,23 @@ export default function CourseDashboardPage({
                     )}
                   </TableBody>
                 </Table>
-                {progressQuery.data ? (
+                {(() => {
+                  const localCompletedCount = objectives.filter(
+                    (objective) => objective.completed,
+                  ).length;
+                  const completedCount = Math.max(
+                    progressQuery.data?.completedObjectives ?? 0,
+                    localCompletedCount,
+                  );
+                  const totalCount =
+                    progressQuery.data?.totalObjectives ?? objectives.length;
+
+                  return (
                   <p className="text-muted-foreground mt-4 text-sm">
-                    Progress: {progressQuery.data.completedObjectives}/
-                    {progressQuery.data.totalObjectives}
+                    Progress: {completedCount}/{totalCount}
                   </p>
-                ) : null}
+                  );
+                })()}
               </CardContent>
             </Card>
 
