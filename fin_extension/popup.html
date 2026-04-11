@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Whitelist Web Guard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="popup-page">
+    <main class="popup-container">
+      <h1>Whitelist Web Guard</h1>
+      <p class="subtitle">Only approved domains are reachable.</p>
+
+      <section class="card compact">
+        <h2>Block Switch</h2>
+        <label class="checkbox-row">
+          <input id="blockToggle" type="checkbox" />
+          <span>Enable website blocking</span>
+        </label>
+      </section>
+
+      <section class="card compact">
+        <h2>Current Whitelist</h2>
+        <ul id="domains"></ul>
+      </section>
+
+      <section class="card compact">
+        <h2>Last Sync</h2>
+        <p id="syncAt">At: -</p>
+        <p id="syncStatus">Status: Not synced yet</p>
+      </section>
+
+      <div class="actions popup-actions">
+        <button id="syncBtn">Sync Now</button>
+        <button id="optionsBtn" class="primary">Open Settings</button>
+      </div>
+
+      <p id="status" class="status"></p>
+    </main>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

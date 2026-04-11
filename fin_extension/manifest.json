@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Whitelist Web Guard",
+  "description": "Blocks all website navigation except whitelisted domains.",
+  "version": "1.0.0",
+  "minimum_chrome_version": "109",
+  "permissions": [
+    "storage",
+    "alarms",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Whitelist Web Guard",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html"
+}
