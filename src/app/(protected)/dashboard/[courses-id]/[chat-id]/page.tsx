@@ -20,20 +20,22 @@ export default function ChatPage({
   const routeParams = use(params);
   const chatId = routeParams["chat-id"];
   const courseId = routeParams["courses-id"];
+  const numericCourseId = Number(courseId);
   const [contentSidebarOpen, setContentSidebarOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes mock timer
-  const totalTime = 300;
-  const { messages, input, setInput, sendMessage, isSendingMessage, setMessages } =
+  const [totalTime, setTotalTime] = useState(300);
+  const [isLeisureTimer, setIsLeisureTimer] = useState(false);
+  const { messages, input, setInput, sendMessage, isSendingMessage } =
     useChat(chatId, courseId);
 
   const courseQuery = api.get.getCourseById.useQuery(
-    { course_id: Number(courseId) },
-    { enabled: Number.isFinite(Number(courseId)) },
+    { course_id: numericCourseId },
+    { enabled: Number.isFinite(numericCourseId) },
   );
 
   const progressQuery = api.get.getCourseProgress.useQuery(
-    { course_id: Number(courseId) },
-    { enabled: Number.isFinite(Number(courseId)) },
+    { course_id: numericCourseId },
+    { enabled: Number.isFinite(numericCourseId) },
   );
 
   useEffect(() => {
@@ -42,6 +44,32 @@ export default function ChatPage({
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!Number.isFinite(numericCourseId)) return;
+
+    const onObjectiveCompleted = (event: Event) => {
+      const customEvent = event as CustomEvent<{ courseId?: number }>;
+      if (customEvent.detail?.courseId !== numericCourseId) return;
+
+      setIsLeisureTimer(true);
+      setTotalTime(120);
+      setTimeLeft(120);
+    };
+
+    window.addEventListener("objective-completed", onObjectiveCompleted);
+    return () => {
+      window.removeEventListener("objective-completed", onObjectiveCompleted);
+    };
+  }, [numericCourseId]);
+
+  useEffect(() => {
+    if (isLeisureTimer && timeLeft === 0) {
+      setIsLeisureTimer(false);
+      setTotalTime(300);
+      setTimeLeft(300);
+    }
+  }, [isLeisureTimer, timeLeft]);
 
   useEffect(() => {
     const attemptFullscreen = async () => {
@@ -87,7 +115,6 @@ export default function ChatPage({
           setInput={setInput}
           sendMessage={sendMessage}
           isSendingMessage={isSendingMessage}
-          setMessages={setMessages}
         />
       </motion.div>
       <AnimatePresence initial={false}>
@@ -122,6 +149,7 @@ export default function ChatPage({
         />
       </div>
       <div className="text-primary absolute bottom-4 left-4 text-lg font-bold">
+        {isLeisureTimer ? "Leisure: " : "Session: "}
         {Math.floor(timeLeft / 60)}m {timeLeft % 60}s
       </div>
     </div>
