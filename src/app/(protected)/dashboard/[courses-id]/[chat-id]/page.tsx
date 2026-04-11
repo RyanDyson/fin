@@ -21,8 +21,8 @@ export default function ChatPage({
   const chatId = routeParams["chat-id"];
   const courseId = routeParams["courses-id"];
   const [contentSidebarOpen, setContentSidebarOpen] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes mock timer
-  const totalTime = 600;
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes mock timer
+  const totalTime = 300;
   const { messages, input, setInput, sendMessage, isSendingMessage, setMessages } =
     useChat(chatId, courseId);
 
