@@ -8,6 +8,7 @@ import { SidebarSimpleIcon } from "@phosphor-icons/react/dist/ssr";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { use } from "react";
 
 export default function ChatPage({
   params,

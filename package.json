@@ -44,6 +44,7 @@
     "postgres": "^3.4.4",
     "radix-ui": "^1.4.3",
     "react": "^19.0.0",
+    "react-circular-progressbar": "^2.2.0",
     "react-code-blocks": "^0.1.6",
     "react-dom": "^19.0.0",
     "react-latex": "^2.0.0",
