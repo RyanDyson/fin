@@ -211,7 +211,9 @@ export default function Page() {
                 >
                   <CardHeader className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-primary">{course.name}</CardTitle>
+                      <CardTitle className="text-primary">
+                        {course.name}
+                      </CardTitle>
                       <CardDescription className="line-clamp-2">
                         {course.description}
                       </CardDescription>
@@ -242,7 +244,8 @@ export default function Page() {
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <span className="text-muted-foreground block text-xs">
-                          {course.fileCount} file{course.fileCount === 1 ? "" : "s"}
+                          {course.fileCount} file
+                          {course.fileCount === 1 ? "" : "s"}
                         </span>
                       </div>
                       <span className="text-muted-foreground text-xs">
@@ -285,11 +288,13 @@ export default function Page() {
                   pdf_file_base64,
                   file_name: file.name,
                   mime_type: file.type || "application/pdf",
-                });
+                }) as unknown;
               }),
             );
 
-            await utils.get.getCourseProgress.invalidate({ course_id: course.id });
+            await utils.get.getCourseProgress.invalidate({
+              course_id: course.id,
+            });
 
             setIsCreateOpen(false);
           }}

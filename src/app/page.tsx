@@ -32,7 +32,8 @@ export default async function Home() {
               <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-lg leading-8">
                 Upload your PDFs, documents, and slides. Fin automatically
                 generates tailored learning objectives, quizzes, and gamified
-                "brainrot" experiences to help you ace your exams faster.
+                &rdquo;brainrot&ldquo; experiences to help you ace your exams
+                faster.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">
                 <Link href="/auth">
@@ -155,7 +156,7 @@ export default async function Home() {
                     </h3>
                     <p className="text-muted-foreground mt-4 flex-auto text-base leading-7">
                       Choose fun, engaging themes and game-like modes to keep
-                      your attention dialed in. Studying doesn't have to be
+                      your attention dialed in. Studying doesn&apos;t have to be
                       boring anymore.
                     </p>
                   </div>

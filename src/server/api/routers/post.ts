@@ -155,7 +155,7 @@ export const postRouter = createTRPCRouter({
               Accept: "application/json",
             },
             body: formData,
-          }
+          },
         );
 
         if (!response.ok) {
@@ -165,7 +165,7 @@ export const postRouter = createTRPCRouter({
           });
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as unknown;
         return data;
       } catch (error) {
         if (error instanceof TRPCError) throw error;

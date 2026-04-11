@@ -90,7 +90,11 @@ function MarkdownContent({ text }: { text: string }) {
           ),
           img: ({ src, alt, title }) => {
             return src ? (
-              <InlineImageBlock src={String(src)} alt={alt} title={title} />
+              <InlineImageBlock
+                src={String(src as string)}
+                alt={alt}
+                title={title}
+              />
             ) : null;
           },
           code: ({ children, className, ...props }) => {

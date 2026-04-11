@@ -34,7 +34,7 @@ export function useChat(chatId: string, courseId: string) {
       createdAt: new Date(),
     };
 
-    setMessages((prev) => [...prev, newUserMsg as Message]);
+    setMessages((prev) => [...prev, newUserMsg]);
     setInput("");
 
     try {
@@ -56,9 +56,9 @@ export function useChat(chatId: string, courseId: string) {
 
       const result = (await response.json()) as ExplainResponse;
       const assistantText =
-        result.explanation?.trim() ||
-        result.message?.trim() ||
-        result.additional_message?.trim() ||
+        result.explanation?.trim() ??
+        result.message?.trim() ??
+        result.additional_message?.trim() ??
         "I could not generate a response.";
 
       if (
@@ -81,8 +81,8 @@ export function useChat(chatId: string, courseId: string) {
             try {
               const parsed = JSON.parse(raw) as unknown;
               return Array.isArray(parsed)
-                ? parsed.filter(
-                    (value): value is number => Number.isInteger(value),
+                ? parsed.filter((value): value is number =>
+                    Number.isInteger(value),
                   )
                 : [];
             } catch {
