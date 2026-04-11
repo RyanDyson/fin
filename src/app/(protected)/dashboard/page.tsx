@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { AppNavbar } from "@/components/global/app-navbar";
 import { CreateCourseDialog } from "@/components/global/create-course-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,11 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { authClient } from "@/server/better-auth/client";
 import { api } from "@/trpc/react";
 import { useRouter } from "next/navigation";
-import { AppNavbar } from "@/components/global/app-navbar";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
-import { Skeleton } from "@/components/ui/skeleton";
 
 type Course = {
   id: number;
@@ -36,18 +37,30 @@ type BrainrotOption = {
 export default function Page() {
   const router = useRouter();
   const utils = api.useUtils();
+  const { data: sessionData } = authClient.useSession();
+  const isAuthenticated = Boolean(sessionData?.user?.id);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
   const {
     data: dbCourses,
     isLoading: isCoursesLoading,
     error: coursesError,
-  } = api.get.getCourses.useQuery();
+  } = api.get.getCourses.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
   const progressQueries = api.useQueries((t) =>
-    (dbCourses ?? []).map((course) =>
-      t.get.getCourseProgress({ course_id: course.id }),
-    ),
+    isAuthenticated
+      ? (dbCourses ?? []).map((course) =>
+          t.get.getCourseProgress({ course_id: course.id }),
+        )
+      : [],
   );
-  const { data: dbBrainrots } = api.get.getBrainrot.useQuery();
+
+  const { data: dbBrainrots } = api.get.getBrainrot.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
   const { mutateAsync: postCourse, isPending: isCreatingCourse } =
     api.post.postCourse.useMutation({
       onSuccess: async () => {
@@ -88,7 +101,7 @@ export default function Page() {
   }, [progressQueries]);
 
   const courses = useMemo<Course[]>(() => {
-    const fetchedCourses: Course[] = (dbCourses ?? []).map((course) => ({
+    return (dbCourses ?? []).map((course) => ({
       id: course.id,
       name: course.title,
       description: course.description ?? "",
@@ -101,8 +114,6 @@ export default function Page() {
       totalObjectives: progressByCourseId.get(course.id)?.totalObjectives ?? 0,
       createdAt: course.createdAt ? new Date(course.createdAt) : new Date(),
     }));
-
-    return fetchedCourses;
   }, [brainrotNameById, dbCourses, progressByCourseId]);
 
   function getProgressPercent(course: Course) {
@@ -130,7 +141,11 @@ export default function Page() {
             </h1>
           </header>
 
-          {isCoursesLoading ? (
+          {!isAuthenticated ? (
+            <p className="text-muted-foreground text-sm">
+              Please sign in to view your courses.
+            </p>
+          ) : isCoursesLoading ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {[1, 2, 3].map((i) => (
                 <Card
@@ -169,9 +184,7 @@ export default function Page() {
                 >
                   <CardHeader className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-primary">
-                        {course.name}
-                      </CardTitle>
+                      <CardTitle className="text-primary">{course.name}</CardTitle>
                       <CardDescription className="line-clamp-2">
                         {course.description}
                       </CardDescription>
@@ -202,8 +215,7 @@ export default function Page() {
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <span className="text-muted-foreground block text-xs">
-                          {course.fileCount} file
-                          {course.fileCount === 1 ? "" : "s"}
+                          {course.fileCount} file{course.fileCount === 1 ? "" : "s"}
                         </span>
                       </div>
                       <span className="text-muted-foreground text-xs">
@@ -236,6 +248,9 @@ export default function Page() {
               description: data.description,
               brainrot_id: data.brainrotId,
             });
+
+            //get objectives
+
             setIsCreateOpen(false);
           }}
           isCreating={isCreatingCourse}
