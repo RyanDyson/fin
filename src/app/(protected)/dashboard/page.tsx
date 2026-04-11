@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { AppNavbar } from "@/components/global/app-navbar";
 import { CreateCourseDialog } from "@/components/global/create-course-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,12 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { api } from "@/trpc/react";
-import { authClient } from "@/server/better-auth/client";
-import { useRouter } from "next/navigation";
-import { AppNavbar } from "@/components/global/app-navbar";
-import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { authClient } from "@/server/better-auth/client";
+import { api } from "@/trpc/react";
+import { useRouter } from "next/navigation";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 
 type Course = {
   id: number;
@@ -34,38 +34,66 @@ type BrainrotOption = {
   name: string;
 };
 
-type CourseDraft = {
-  name: string;
-  description: string;
-  files: File[];
-};
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result;
+
+      if (typeof result !== "string") {
+        reject(new Error("Could not read file."));
+        return;
+      }
+
+      const [, base64 = ""] = result.split(",");
+      resolve(base64);
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Could not read file."));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function Page() {
   const router = useRouter();
-  const { data: sessionData } = authClient.useSession();
   const utils = api.useUtils();
+  const { data: sessionData } = authClient.useSession();
+  const isAuthenticated = Boolean(sessionData?.user?.id);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isBrainrotOpen, setIsBrainrotOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const [selectedBrainrot, setSelectedBrainrot] = useState<number | null>(null);
-  const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
-  const resolvedUserId =
-    sessionData?.user.id ?? "rBji61OyvMYVCetmynej7FDOroGqUDT9";
+
   const {
     data: dbCourses,
     isLoading: isCoursesLoading,
     error: coursesError,
-  } = api.get.getCourses.useQuery();
-  const { data: dbBrainrots } = api.get.getBrainrot.useQuery();
+  } = api.get.getCourses.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const progressQueries = api.useQueries((t) =>
+    isAuthenticated
+      ? (dbCourses ?? []).map((course) =>
+          t.get.getCourseProgress({ course_id: course.id }),
+        )
+      : [],
+  );
+
+  const { data: dbBrainrots } = api.get.getBrainrot.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
   const { mutateAsync: postCourse, isPending: isCreatingCourse } =
     api.post.postCourse.useMutation({
       onSuccess: async () => {
-        if (!resolvedUserId) return;
         await utils.get.getCourses.invalidate();
       },
     });
+
+  const { mutateAsync: createCourseWithBackend, isPending: isCreatingBackend } =
+    api.post.createCourseWithBackend.useMutation();
 
   const brainrotOptions = useMemo<BrainrotOption[]>(
     () =>
@@ -76,20 +104,6 @@ export default function Page() {
     [dbBrainrots],
   );
 
-  useEffect(() => {
-    if (selectedBrainrot === null && brainrotOptions.length > 0) {
-      setSelectedBrainrot(brainrotOptions[0].id);
-    }
-  }, [brainrotOptions, selectedBrainrot]);
-
-  const selectedBrainrotOption = useMemo(
-    () =>
-      brainrotOptions.find((option) => option.id === selectedBrainrot) ??
-      brainrotOptions[0] ??
-      null,
-    [brainrotOptions, selectedBrainrot],
-  );
-
   const brainrotNameById = useMemo(
     () =>
       new Map(
@@ -98,41 +112,23 @@ export default function Page() {
     [dbBrainrots],
   );
 
-  const canCreate = useMemo(
-    () => name.trim().length > 0 && description.trim().length > 0,
-    [name, description],
-  );
-
-  function handleCreateCourse() {
-    if (!canCreate) return;
-
-    setDraftCourse({
-      name: name.trim(),
-      description: description.trim(),
-      files,
-    });
-    setIsCreateOpen(false);
-    setIsBrainrotOpen(true);
-  }
-
-  async function handleConfirmBrainrot() {
-    if (!draftCourse || !selectedBrainrotOption || !resolvedUserId) return;
-
-    await postCourse({
-      title: draftCourse.name,
-      description: draftCourse.description,
-      brainrot_id: selectedBrainrotOption.id,
-    });
-
-    setName("");
-    setDescription("");
-    setFiles([]);
-    setDraftCourse(null);
-    setIsBrainrotOpen(false);
-  }
+  const progressByCourseId = useMemo(() => {
+    return new Map(
+      progressQueries
+        .map((query) => query.data)
+        .filter((data): data is NonNullable<typeof data> => Boolean(data))
+        .map((data) => [
+          data.courseId,
+          {
+            completedObjectives: data.completedObjectives,
+            totalObjectives: data.totalObjectives,
+          },
+        ]),
+    );
+  }, [progressQueries]);
 
   const courses = useMemo<Course[]>(() => {
-    const fetchedCourses: Course[] = (dbCourses ?? []).map((course) => ({
+    return (dbCourses ?? []).map((course) => ({
       id: course.id,
       name: course.title,
       description: course.description ?? "",
@@ -140,13 +136,12 @@ export default function Page() {
       brainrot:
         brainrotNameById.get(String(course.brainrot)) ??
         `Brainrot ${course.brainrot}`,
-      completedObjectives: 0,
-      totalObjectives: 0,
+      completedObjectives:
+        progressByCourseId.get(course.id)?.completedObjectives ?? 0,
+      totalObjectives: progressByCourseId.get(course.id)?.totalObjectives ?? 0,
       createdAt: course.createdAt ? new Date(course.createdAt) : new Date(),
     }));
-
-    return fetchedCourses;
-  }, [brainrotNameById, dbCourses]);
+  }, [brainrotNameById, dbCourses, progressByCourseId]);
 
   function getProgressPercent(course: Course) {
     if (course.totalObjectives <= 0) return 0;
@@ -173,7 +168,11 @@ export default function Page() {
             </h1>
           </header>
 
-          {isCoursesLoading ? (
+          {!isAuthenticated ? (
+            <p className="text-muted-foreground text-sm">
+              Please sign in to view your courses.
+            </p>
+          ) : isCoursesLoading ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {[1, 2, 3].map((i) => (
                 <Card
@@ -212,9 +211,7 @@ export default function Page() {
                 >
                   <CardHeader className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-primary">
-                        {course.name}
-                      </CardTitle>
+                      <CardTitle className="text-primary">{course.name}</CardTitle>
                       <CardDescription className="line-clamp-2">
                         {course.description}
                       </CardDescription>
@@ -245,8 +242,7 @@ export default function Page() {
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <span className="text-muted-foreground block text-xs">
-                          {course.fileCount} file
-                          {course.fileCount === 1 ? "" : "s"}
+                          {course.fileCount} file{course.fileCount === 1 ? "" : "s"}
                         </span>
                       </div>
                       <span className="text-muted-foreground text-xs">
@@ -273,15 +269,31 @@ export default function Page() {
         <CreateCourseDialog
           isOpen={isCreateOpen}
           onClose={() => setIsCreateOpen(false)}
-          onCreate={(data) => {
-            // Handle the creation process
-            setName(data.name);
-            setDescription(data.description);
-            setFiles(data.files);
-            setSelectedBrainrot(data.brainrotId);
-            // handleConfirmBrainrot();
+          onCreate={async (data) => {
+            const course = await postCourse({
+              title: data.name,
+              description: data.description,
+              brainrot_id: data.brainrotId,
+            });
+
+            await Promise.all(
+              data.files.map(async (file) => {
+                const pdf_file_base64 = await fileToBase64(file);
+
+                return createCourseWithBackend({
+                  course_id: course.id,
+                  pdf_file_base64,
+                  file_name: file.name,
+                  mime_type: file.type || "application/pdf",
+                });
+              }),
+            );
+
+            await utils.get.getCourseProgress.invalidate({ course_id: course.id });
+
+            setIsCreateOpen(false);
           }}
-          isCreating={isCreatingCourse}
+          isCreating={isCreatingCourse || isCreatingBackend}
           brainrotOptions={brainrotOptions}
         />
       </div>

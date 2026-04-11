@@ -158,7 +158,7 @@ export default function CourseDashboardPage({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[50px]">Status</TableHead>
+                      <TableHead className="w-12">Status</TableHead>
                       <TableHead>Objective</TableHead>
                     </TableRow>
                   </TableHeader>

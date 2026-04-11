@@ -90,7 +90,7 @@ export function CreateCourseDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl gap-0 overflow-hidden p-0 sm:rounded-3xl">
+      <DialogContent className="w-fit min-w-fit max-w-none gap-0 overflow-hidden p-0 sm:rounded-3xl">
         {step === Steps.DETAILS ? (
           <>
             {/* Step 1: Course Details */}

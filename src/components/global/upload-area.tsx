@@ -65,7 +65,7 @@ export function UploadArea({
   };
 
   return (
-    <div>
+    <>
       <Input
         type="file"
         multiple
@@ -92,7 +92,7 @@ export function UploadArea({
           Click to upload or drag and drop
         </h3>
         <p className="text-muted-foreground mt-1 text-center text-sm">
-          {helperText || "PDF, DOCX, PPTX, or Images (max 10MB)"}
+          {helperText ?? "PDF, DOCX, PPTX, or Images (max 10MB)"}
         </p>
       </div>
 
@@ -103,12 +103,12 @@ export function UploadArea({
             initial={{ opacity: 0, height: 0, marginTop: 0 }}
             animate={{ opacity: 1, height: "auto", marginTop: 24 }}
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            className="space-y-3 overflow-hidden"
+            className="space-y-3 overflow-hidden w-fit"
           >
             <h4 className="text-foreground text-sm font-medium">
               Selected Files ({files.length})
             </h4>
-            <div className="max-h-48 w-full space-y-2 overflow-y-auto">
+            <div className="max-h-48 w-fit space-y-2 overflow-y-auto">
               {files.map((file, index) => (
                 <motion.div
                   key={`${file.name}-${index}`}
@@ -147,6 +147,6 @@ export function UploadArea({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
