@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   CaretDownIcon,
@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { api } from "@/trpc/react";
 
 enum ObjectiveStatus {
   Completed = "completed",
@@ -28,51 +29,152 @@ const ObjectiveIconMap: Record<ObjectiveStatus, React.ReactNode> = {
 };
 
 export type Objective = {
-  id: string;
+  id: number;
   title: string;
   status: ObjectiveStatus;
 };
 
-// Mock data based on the Feynman Technique goals for Newton's laws
-const mockObjectives: Objective[] = [
-  {
-    id: "obj-1",
-    title: "Understand inertia and an object's resistance to change",
-    status: ObjectiveStatus.Completed,
-  },
-  {
-    id: "obj-2",
-    title: "Explain that force is mass times acceleration (F=ma)",
-    status: ObjectiveStatus.InProgress,
-  },
-  {
-    id: "obj-3",
-    title: "Provide a real-world example of the second law",
-    status: ObjectiveStatus.Pending,
-  },
-  {
-    id: "obj-4",
-    title: "Address the 'dumb student' misconceptions",
-    status: ObjectiveStatus.Pending,
-  },
-];
-
-export function ProgressDropdown({ inline }: { inline?: boolean } = {}) {
+export function ProgressDropdown({
+  inline,
+  courseId,
+}: {
+  inline?: boolean;
+  courseId?: string;
+} = {}) {
   const [isOpen, setIsOpen] = useState(false);
-  const [objectives] = useState<Objective[]>(mockObjectives);
+  const [selectedObjectiveId, setSelectedObjectiveId] = useState<number | null>(
+    null,
+  );
+  const [localCompletedObjectiveIds, setLocalCompletedObjectiveIds] = useState<
+    Set<number>
+  >(new Set());
+  const [settingTopicObjectiveId, setSettingTopicObjectiveId] = useState<
+    number | null
+  >(null);
+  const numericCourseId = Number(courseId);
+  const completedStorageKey = `completedObjectives:${numericCourseId}`;
+  const selectedStorageKey = `selectedObjective:${numericCourseId}`;
+  const objectivesQuery = api.get.getCourseObjectives.useQuery(
+    { course_id: numericCourseId },
+    { enabled: Number.isFinite(numericCourseId) },
+  );
+  const progressQuery = api.get.getCourseProgress.useQuery(
+    { course_id: numericCourseId },
+    { enabled: Number.isFinite(numericCourseId) },
+  );
 
-  const completedCount = objectives.filter(
-    (obj) => obj.status === ObjectiveStatus.Completed,
-  ).length;
-  const totalCount = objectives.length;
-  const progressPercentage = Math.round((completedCount / totalCount) * 100);
+  useEffect(() => {
+    if (!Number.isFinite(numericCourseId) || typeof window === "undefined") {
+      return;
+    }
+
+    const readLocalState = () => {
+      const rawCompleted = window.localStorage.getItem(completedStorageKey);
+      const rawSelected = window.localStorage.getItem(selectedStorageKey);
+
+      const parsedCompleted = (() => {
+        if (!rawCompleted) return [] as number[];
+
+        try {
+          const parsed = JSON.parse(rawCompleted) as unknown;
+          return Array.isArray(parsed)
+            ? parsed.filter((value): value is number => Number.isInteger(value))
+            : [];
+        } catch {
+          return [] as number[];
+        }
+      })();
+
+      setLocalCompletedObjectiveIds(new Set(parsedCompleted));
+
+      if (rawSelected && Number.isInteger(Number(rawSelected))) {
+        setSelectedObjectiveId(Number(rawSelected));
+      }
+    };
+
+    const handleCompletedUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        courseId?: number;
+      }>;
+      if (customEvent.detail?.courseId === numericCourseId) {
+        readLocalState();
+      }
+    };
+
+    readLocalState();
+    window.addEventListener("objective-completed", handleCompletedUpdate);
+    window.addEventListener("storage", readLocalState);
+
+    return () => {
+      window.removeEventListener("objective-completed", handleCompletedUpdate);
+      window.removeEventListener("storage", readLocalState);
+    };
+  }, [completedStorageKey, numericCourseId, selectedStorageKey]);
+
+  const objectives = useMemo<Objective[]>(() => {
+    return (objectivesQuery.data ?? []).map((objective) => ({
+      id: objective.id,
+      title: objective.content,
+      status: objective.isDone || localCompletedObjectiveIds.has(objective.id)
+        ? ObjectiveStatus.Completed
+        : ObjectiveStatus.Pending,
+    }));
+  }, [localCompletedObjectiveIds, objectivesQuery.data]);
+
+  const completedCount =
+    progressQuery.data?.completedObjectives ??
+    objectives.filter((obj) => obj.status === ObjectiveStatus.Completed).length;
+  const totalCount =
+    progressQuery.data?.totalObjectives ?? objectives.length;
+  const progressPercentage =
+    totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
+
+  const selectedObjective =
+    objectives.find((obj) => obj.id === selectedObjectiveId) ?? null;
 
   const currentObjective =
+    selectedObjective ??
     objectives.find((obj) => obj.status === ObjectiveStatus.InProgress) ??
     objectives.find((obj) => obj.status === ObjectiveStatus.Pending) ??
     objectives[objectives.length - 1];
 
   const toggleDropdown = () => setIsOpen((prev) => !prev);
+
+  const handleObjectiveClick = useCallback(
+    async (objective: Objective) => {
+      if (!Number.isFinite(numericCourseId)) return;
+      if (settingTopicObjectiveId === objective.id) return;
+
+      try {
+        setSelectedObjectiveId(objective.id);
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(selectedStorageKey, String(objective.id));
+        }
+        setSettingTopicObjectiveId(objective.id);
+
+        const response = await fetch(
+          `http://localhost:8000/message/explain/set-topic/${numericCourseId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({ message: objective.title }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to set topic: ${response.status}`);
+        }
+
+        setIsOpen(false);
+      } finally {
+        setSettingTopicObjectiveId(null);
+      }
+    },
+    [numericCourseId, selectedStorageKey, settingTopicObjectiveId],
+  );
 
   return (
     <div
@@ -121,8 +223,9 @@ export function ProgressDropdown({ inline }: { inline?: boolean } = {}) {
                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
                 transition={{ duration: 0.2 }}
                 className={cn(
-                  "flex items-start justify-center gap-3 rounded-xl p-3 transition-colors",
+                  "hover:bg-muted/50 flex cursor-pointer items-start justify-center gap-3 rounded-xl p-3 transition-colors",
                 )}
+                onClick={() => void handleObjectiveClick(objective)}
               >
                 <span>{ObjectiveIconMap[objective.status]}</span>
                 <div className="flex-1 space-y-1">
@@ -136,6 +239,11 @@ export function ProgressDropdown({ inline }: { inline?: boolean } = {}) {
                   >
                     {objective.title}
                   </p>
+                  {settingTopicObjectiveId === objective.id ? (
+                    <p className="text-muted-foreground text-xs">
+                      Setting topic...
+                    </p>
+                  ) : null}
                 </div>
               </motion.div>
             ))}

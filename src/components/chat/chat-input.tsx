@@ -1,6 +1,5 @@
 "use client";
 
-import { useChat } from "@/hooks/use-chat";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "../ui/button";
 import {
@@ -37,8 +36,19 @@ function getFileIcon() {
   return <FileTextIcon className="size-4" />;
 }
 
-export function ChatInput({ uuid }: { uuid: string }) {
-  const { input, setInput, sendMessage, isSendingMessage } = useChat(uuid);
+type ChatInputProps = {
+  input: string;
+  setInput: (value: string) => void;
+  sendMessage: () => Promise<void>;
+  isSendingMessage: boolean;
+};
+
+export function ChatInput({
+  input,
+  setInput,
+  sendMessage,
+  isSendingMessage,
+}: ChatInputProps) {
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,7 +92,7 @@ export function ChatInput({ uuid }: { uuid: string }) {
   };
 
   const handleSend = () => {
-    sendMessage();
+    void sendMessage();
     clearAttachments();
   };
 

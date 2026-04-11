@@ -1,6 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { use } from "react";
+
+import { AppNavbar } from "@/components/global/app-navbar";
+import { UploadDialog } from "@/components/global/upload-dialog";
+import { api } from "@/trpc/react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,86 +22,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import {
   ChatTeardropTextIcon,
-  FileArrowUpIcon,
   CheckCircleIcon,
   CircleIcon,
+  FileArrowUpIcon,
   FileIcon,
   PlusIcon,
   TargetIcon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
-import { UploadDialog } from "@/components/global/upload-dialog";
-import { use } from "react";
-import { AppNavbar } from "@/components/global/app-navbar";
+import { useRouter } from "next/navigation";
 
-// Mock Data
-const mockObjectives = [
-  {
-    id: "1",
-    content: "Understand inertia and an object's resistance to change",
-    completed: true,
-  },
-  {
-    id: "2",
-    content: "Explain that force is mass times acceleration (F=ma)",
-    completed: true,
-  },
-  {
-    id: "3",
-    content: "Provide a real-world example of the second law",
-    completed: false,
-  },
-  {
-    id: "4",
-    content: "Address the 'dumb student' misconceptions",
-    completed: false,
-  },
-];
+type Objective = {
+  id: number;
+  content: string;
+  completed: boolean;
+};
 
-const mockFiles = [
-  {
-    id: "1",
-    name: "Newton's Principia.pdf",
-    size: "2.4 MB",
-    date: "Oct 12, 2023",
-  },
-  {
-    id: "2",
-    name: "Physics_101_Syllabus.docx",
-    size: "1.1 MB",
-    date: "Oct 10, 2023",
-  },
-  {
-    id: "3",
-    name: "Lecture_3_Slides.pptx",
-    size: "4.5 MB",
-    date: "Oct 14, 2023",
-  },
-];
-
-const mockChats = [
-  {
-    id: "chat-123",
-    title: "Reviewing Newton's First Law",
-    date: "Oct 15, 2023",
-    progress: "100%",
-  },
-  {
-    id: "chat-456",
-    title: "Explaining F=ma",
-    date: "Oct 16, 2023",
-    progress: "50%",
-  },
-  {
-    id: "chat-789",
-    title: "General Q&A Session",
-    date: "Oct 18, 2023",
-    progress: "10%",
-  },
-];
+type ChatHistoryItem = {
+  id: number;
+  title: string;
+  date: string | null;
+  lastMessage: string | null;
+  active: boolean;
+};
 
 export default function CourseDashboardPage({
   params,
@@ -103,8 +54,94 @@ export default function CourseDashboardPage({
   params: Promise<{ "courses-id": string }>;
 }) {
   const routeParams = use(params);
-  const courseId = routeParams["courses-id"];
+  const router = useRouter();
+  const courseId = Number(routeParams["courses-id"]);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [settingTopicObjectiveId, setSettingTopicObjectiveId] = useState<
+    number | null
+  >(null);
+
+  const courseQuery = api.get.getCourseById.useQuery(
+    { course_id: courseId },
+    { enabled: Number.isFinite(courseId) },
+  );
+
+  const objectivesQuery = api.get.getCourseObjectives.useQuery(
+    { course_id: courseId },
+    { enabled: Number.isFinite(courseId) },
+  );
+
+  const progressQuery = api.get.getCourseProgress.useQuery(
+    { course_id: courseId },
+    { enabled: Number.isFinite(courseId) },
+  );
+
+  const chatsQuery = api.get.getChats.useQuery(
+    { courseId },
+    { enabled: Number.isFinite(courseId) },
+  );
+
+  const createSessionMutation = api.post.postSession.useMutation();
+
+  const objectives = useMemo<Objective[]>(() => {
+    const completedIds = new Set(
+      (objectivesQuery.data ?? [])
+        .filter((objective) => objective.isDone)
+        .map((objective) => objective.id),
+    );
+
+    return (objectivesQuery.data ?? []).map((objective) => ({
+      id: objective.id,
+      content: objective.content,
+      completed: completedIds.has(objective.id),
+    }));
+  }, [objectivesQuery.data]);
+
+  const chats = useMemo<ChatHistoryItem[]>(() => {
+    return (chatsQuery.data ?? []).map((chat) => ({
+      id: chat.id,
+      title: chat.title,
+      date: chat.date ? new Date(chat.date).toLocaleDateString() : null,
+      lastMessage: chat.lastMessage,
+      active: chat.active,
+    }));
+  }, [chatsQuery.data]);
+
+  async function handleObjectiveClick(objectiveContent: string, objectiveId: number) {
+    if (!Number.isFinite(courseId) || settingTopicObjectiveId === objectiveId) {
+      return;
+    }
+
+    try {
+      setSettingTopicObjectiveId(objectiveId);
+
+      const response = await fetch(
+        `http://localhost:8000/message/explain/set-topic/${courseId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ message: objectiveContent }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to set topic: ${response.status}`);
+      }
+
+      const session = await createSessionMutation.mutateAsync({
+        courseId,
+        completedObjectiveId: objectiveId,
+        active: true,
+      });
+
+      router.push(`/dashboard/${courseId}/${session.id}`);
+    } finally {
+      setSettingTopicObjectiveId(null);
+    }
+  }
 
   return (
     <>
@@ -117,14 +154,14 @@ export default function CourseDashboardPage({
         }}
       />
       <div className="container mx-auto max-w-7xl space-y-8 py-8">
-        {/* Page Header */}
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-primary text-3xl font-bold tracking-tight">
-              Newton&apos;s Laws of Motion
+              {courseQuery.data?.title ?? "Course"}
             </h1>
             <p className="text-muted-foreground mt-1 text-lg">
-              Master the fundamental principles of classical mechanics.
+              {courseQuery.data?.description ??
+                "Master the fundamental principles of classical mechanics."}
             </p>
           </div>
           <Link href={`/dashboard/${courseId}/new-chat`}>
@@ -136,9 +173,7 @@ export default function CourseDashboardPage({
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Left Column - Objectives & Files */}
           <div className="space-y-8 lg:col-span-2">
-            {/* Learning Objectives */}
             <Card>
               <CardHeader className="flex items-center justify-between">
                 <div>
@@ -163,35 +198,64 @@ export default function CourseDashboardPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockObjectives.map((obj) => (
-                      <TableRow key={obj.id}>
-                        <TableCell>
-                          {obj.completed ? (
-                            <CheckCircleIcon
-                              weight="fill"
-                              className="size-5 text-green-500"
-                            />
-                          ) : (
-                            <CircleIcon className="text-muted-foreground size-5" />
-                          )}
-                        </TableCell>
-                        <TableCell
-                          className={
-                            obj.completed
-                              ? "text-muted-foreground line-through"
-                              : "text-foreground font-medium"
-                          }
-                        >
-                          {obj.content}
+                    {objectives.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-muted-foreground">
+                          No objectives have been generated yet.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      objectives.map((objective) => (
+                        <TableRow
+                          key={objective.id}
+                          className="cursor-pointer transition-colors hover:bg-muted/50"
+                          onClick={() =>
+                            void handleObjectiveClick(
+                              objective.content,
+                              objective.id,
+                            )
+                          }
+                        >
+                          <TableCell>
+                            {objective.completed ? (
+                              <CheckCircleIcon
+                                weight="fill"
+                                className="size-5 text-green-500"
+                              />
+                            ) : (
+                              <CircleIcon className="text-muted-foreground size-5" />
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className={
+                              objective.completed
+                                ? "text-muted-foreground line-through"
+                                : "text-foreground font-medium"
+                            }
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <span>{objective.content}</span>
+                              {settingTopicObjectiveId === objective.id ? (
+                                <span className="text-muted-foreground text-xs">
+                                  Setting topic...
+                                </span>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
+                {progressQuery.data ? (
+                  <p className="text-muted-foreground mt-4 text-sm">
+                    Progress: {progressQuery.data.completedObjectives}/
+                    {progressQuery.data.totalObjectives}
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
 
-            {/* Files & Materials */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
@@ -213,35 +277,14 @@ export default function CourseDashboardPage({
                 </Button>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Date Added</TableHead>
-                      <TableHead className="text-right">Size</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockFiles.map((file) => (
-                      <TableRow key={file.id}>
-                        <TableCell className="font-medium">
-                          {file.name}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {file.date}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-right">
-                          {file.size}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+                  File listing is not exposed yet. The backend stores uploaded
+                  files, but a tRPC files query still needs to be added.
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Right Column - Chat History */}
           <div className="space-y-8 lg:col-span-1">
             <Card className="h-full">
               <CardHeader>
@@ -255,27 +298,38 @@ export default function CourseDashboardPage({
               </CardHeader>
               <CardContent className="px-0">
                 <div className="flex flex-col">
-                  {mockChats.map((chat) => (
-                    <Link
-                      key={chat.id}
-                      href={`/dashboard/${courseId}/${chat.id}`}
-                      className="hover:bg-muted/50 border-b px-6 py-4 transition-colors last:border-0"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <p className="text-foreground leading-none font-medium">
-                            {chat.title}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            {chat.date}
-                          </p>
+                  {chats.length === 0 ? (
+                    <div className="text-muted-foreground px-6 py-4 text-sm">
+                      No chats yet for this course.
+                    </div>
+                  ) : (
+                    chats.map((chat) => (
+                      <Link
+                        key={chat.id}
+                        href={`/dashboard/${courseId}/${chat.id}`}
+                        className="hover:bg-muted/50 border-b px-6 py-4 transition-colors last:border-0"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <p className="text-foreground leading-none font-medium">
+                              {chat.title}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {chat.date ?? "Recently"}
+                            </p>
+                            {chat.lastMessage ? (
+                              <p className="text-muted-foreground/80 line-clamp-1 text-xs">
+                                {chat.lastMessage}
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="bg-primary/10 text-primary flex h-6 items-center rounded-full px-2.5 text-xs font-semibold">
+                            {chat.active ? "Active" : "Past"}
+                          </div>
                         </div>
-                        <div className="bg-primary/10 text-primary flex h-6 items-center rounded-full px-2.5 text-xs font-semibold">
-                          {chat.progress}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

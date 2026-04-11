@@ -1,7 +1,13 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { brainrot, chats, courses, objectives } from "@/server/db/schema";
+import {
+  brainrot,
+  chats,
+  courses,
+  messages,
+  objectives,
+} from "@/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 export const getRouter = createTRPCRouter({
@@ -128,6 +134,28 @@ export const getRouter = createTRPCRouter({
       };
     }),
 
+  getCourseObjectives: protectedProcedure
+    .input(
+      z.object({
+        course_id: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const results = await ctx.db
+        .select()
+        .from(objectives)
+        .innerJoin(courses, eq(objectives.course_id, courses.id))
+        .where(
+          and(
+            eq(objectives.course_id, input.course_id),
+            eq(courses.user_id, ctx.session.user.id),
+          ),
+        )
+        .orderBy(objectives.id);
+
+      return results.map((result) => result.objectives);
+    }),
+
   getChats: protectedProcedure
     .input(
       z.object({
@@ -142,12 +170,41 @@ export const getRouter = createTRPCRouter({
         .where(
           and(
             eq(chats.courseId, input.courseId),
-            eq(chats.active, false),
             eq(courses.user_id, ctx.session.user.id),
           ),
         );
 
-      return results.map((r) => r.chats);
+      const chatsWithMetadata = await Promise.all(
+        results.map(async (result) => {
+          const [firstMessage] = await ctx.db
+            .select({ createdAt: messages.createdAt, content: messages.content })
+            .from(messages)
+            .where(eq(messages.chat_id, result.chats.id))
+            .orderBy(messages.createdAt)
+            .limit(1);
+
+          const [lastMessage] = await ctx.db
+            .select({ createdAt: messages.createdAt, content: messages.content })
+            .from(messages)
+            .where(eq(messages.chat_id, result.chats.id))
+            .orderBy(desc(messages.createdAt))
+            .limit(1);
+
+          return {
+            id: result.chats.id,
+            courseId: result.chats.courseId,
+            active: result.chats.active,
+            completedObjectives: result.chats.completedObjectives,
+            title:
+              firstMessage?.content?.slice(0, 60)?.trim() ||
+              `Chat ${result.chats.id}`,
+            date: lastMessage?.createdAt ?? firstMessage?.createdAt ?? null,
+            lastMessage: lastMessage?.content ?? null,
+          };
+        }),
+      );
+
+      return chatsWithMetadata;
     }),
 
   getBrainrot: protectedProcedure.query(async ({ ctx }) => {

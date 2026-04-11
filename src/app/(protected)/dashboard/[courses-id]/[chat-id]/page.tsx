@@ -9,17 +9,32 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { use } from "react";
+import { api } from "@/trpc/react";
+import { useChat } from "@/hooks/use-chat";
 
 export default function ChatPage({
   params,
 }: {
-  params: Promise<{ "chat-id": string }>;
+  params: Promise<{ "courses-id": string; "chat-id": string }>;
 }) {
   const routeParams = use(params);
   const chatId = routeParams["chat-id"];
+  const courseId = routeParams["courses-id"];
   const [contentSidebarOpen, setContentSidebarOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes mock timer
   const totalTime = 600;
+  const { messages, input, setInput, sendMessage, isSendingMessage, setMessages } =
+    useChat(chatId, courseId);
+
+  const courseQuery = api.get.getCourseById.useQuery(
+    { course_id: Number(courseId) },
+    { enabled: Number.isFinite(Number(courseId)) },
+  );
+
+  const progressQuery = api.get.getCourseProgress.useQuery(
+    { course_id: Number(courseId) },
+    { enabled: Number.isFinite(Number(courseId)) },
+  );
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -64,10 +79,16 @@ export default function ChatPage({
           <SidebarSimpleIcon />
         </Button>
         <Checkpoint />
-        <ProgressDropdown />
-        <ChatScrollArea uuid={chatId} />
+        <ProgressDropdown courseId={courseId} />
+        <ChatScrollArea messages={messages} />
         <div className="to-background absolute right-0 bottom-4 h-16 w-full bg-linear-to-b from-transparent" />
-        <ChatInput uuid={chatId} />
+        <ChatInput
+          input={input}
+          setInput={setInput}
+          sendMessage={sendMessage}
+          isSendingMessage={isSendingMessage}
+          setMessages={setMessages}
+        />
       </motion.div>
       <AnimatePresence initial={false}>
         {contentSidebarOpen && (
@@ -78,7 +99,7 @@ export default function ChatPage({
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden whitespace-nowrap"
           >
-            <div className="h-full w-[336px] py-4 pr-4">
+            <div className="h-full w-84 py-4 pr-4">
               <motion.div className="border-primary/30 from-primary/10 to-primary/20 h-full overflow-clip rounded-xl border bg-linear-to-b">
                 <div className="p-4 whitespace-normal">
                   <h2 className="text-lg font-semibold">Learning Materials</h2>
