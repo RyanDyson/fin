@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
   brainrot,
@@ -15,23 +16,17 @@ export const postRouter = createTRPCRouter({
       z.object({
         title: z.string().min(1),
         description: z.string().nullable().optional(),
+        brainrot_id: z.number().int().positive(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "You must be logged in to post a course.",
-        });
-      }
-      const [defaultBrainrot] = await ctx.db
-        .select()
+      const [selectedBrainrot] = await ctx.db
+        .select({ id: brainrot.id })
         .from(brainrot)
-        .orderBy(brainrot.id)
-        .limit(1);
+        .where(eq(brainrot.id, input.brainrot_id));
       const { id: userId } = ctx.session.user;
 
-      if (!defaultBrainrot) {
+      if (!selectedBrainrot) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message:
@@ -45,7 +40,7 @@ export const postRouter = createTRPCRouter({
           title: input.title,
           description: input.description ?? null,
           user_id: userId,
-          brainrot: defaultBrainrot.id,
+          brainrot: input.brainrot_id,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -103,12 +98,28 @@ export const postRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      let completedObjectiveId = input.completedObjectiveId;
+
+      if (!completedObjectiveId) {
+        const [placeholderObjective] = await ctx.db
+          .insert(objectives)
+          .values({
+            course_id: input.courseId,
+            content: "Session started",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .returning({ id: objectives.id });
+
+        completedObjectiveId = placeholderObjective.id;
+      }
+
       const [chat] = await ctx.db
         .insert(chats)
         .values({
           courseId: input.courseId,
-          completedObjectives: input.completedObjectiveId,
-          active: input.active ?? false,
+          completedObjectives: completedObjectiveId,
+          active: input.active ?? true,
         })
         .returning();
 

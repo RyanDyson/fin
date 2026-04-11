@@ -13,12 +13,6 @@ export const updateRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.session) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "You must be logged in to update a course.",
-        });
-      }
       const { id: userId } = ctx.session.user;
       let targetBrainrotId = input.brainrot_id;
 
