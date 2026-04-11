@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { CreateCourseDialog } from "@/components/global/create-course-dialog";
@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { api } from "@/trpc/react";
-import { authClient } from "@/server/better-auth/client";
 import { useRouter } from "next/navigation";
 import { AppNavbar } from "@/components/global/app-navbar";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
@@ -34,35 +33,24 @@ type BrainrotOption = {
   name: string;
 };
 
-type CourseDraft = {
-  name: string;
-  description: string;
-  files: File[];
-};
-
 export default function Page() {
   const router = useRouter();
-  const { data: sessionData } = authClient.useSession();
   const utils = api.useUtils();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isBrainrotOpen, setIsBrainrotOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const [selectedBrainrot, setSelectedBrainrot] = useState<number | null>(null);
-  const [draftCourse, setDraftCourse] = useState<CourseDraft | null>(null);
-  const resolvedUserId =
-    sessionData?.user.id ?? "rBji61OyvMYVCetmynej7FDOroGqUDT9";
   const {
     data: dbCourses,
     isLoading: isCoursesLoading,
     error: coursesError,
   } = api.get.getCourses.useQuery();
+  const progressQueries = api.useQueries((t) =>
+    (dbCourses ?? []).map((course) =>
+      t.get.getCourseProgress({ course_id: course.id }),
+    ),
+  );
   const { data: dbBrainrots } = api.get.getBrainrot.useQuery();
   const { mutateAsync: postCourse, isPending: isCreatingCourse } =
     api.post.postCourse.useMutation({
       onSuccess: async () => {
-        if (!resolvedUserId) return;
         await utils.get.getCourses.invalidate();
       },
     });
@@ -76,20 +64,6 @@ export default function Page() {
     [dbBrainrots],
   );
 
-  useEffect(() => {
-    if (selectedBrainrot === null && brainrotOptions.length > 0) {
-      setSelectedBrainrot(brainrotOptions[0].id);
-    }
-  }, [brainrotOptions, selectedBrainrot]);
-
-  const selectedBrainrotOption = useMemo(
-    () =>
-      brainrotOptions.find((option) => option.id === selectedBrainrot) ??
-      brainrotOptions[0] ??
-      null,
-    [brainrotOptions, selectedBrainrot],
-  );
-
   const brainrotNameById = useMemo(
     () =>
       new Map(
@@ -98,38 +72,20 @@ export default function Page() {
     [dbBrainrots],
   );
 
-  const canCreate = useMemo(
-    () => name.trim().length > 0 && description.trim().length > 0,
-    [name, description],
-  );
-
-  function handleCreateCourse() {
-    if (!canCreate) return;
-
-    setDraftCourse({
-      name: name.trim(),
-      description: description.trim(),
-      files,
-    });
-    setIsCreateOpen(false);
-    setIsBrainrotOpen(true);
-  }
-
-  async function handleConfirmBrainrot() {
-    if (!draftCourse || !selectedBrainrotOption || !resolvedUserId) return;
-
-    await postCourse({
-      title: draftCourse.name,
-      description: draftCourse.description,
-      brainrot_id: selectedBrainrotOption.id,
-    });
-
-    setName("");
-    setDescription("");
-    setFiles([]);
-    setDraftCourse(null);
-    setIsBrainrotOpen(false);
-  }
+  const progressByCourseId = useMemo(() => {
+    return new Map(
+      progressQueries
+        .map((query) => query.data)
+        .filter((data): data is NonNullable<typeof data> => Boolean(data))
+        .map((data) => [
+          data.courseId,
+          {
+            completedObjectives: data.completedObjectives,
+            totalObjectives: data.totalObjectives,
+          },
+        ]),
+    );
+  }, [progressQueries]);
 
   const courses = useMemo<Course[]>(() => {
     const fetchedCourses: Course[] = (dbCourses ?? []).map((course) => ({
@@ -140,13 +96,14 @@ export default function Page() {
       brainrot:
         brainrotNameById.get(String(course.brainrot)) ??
         `Brainrot ${course.brainrot}`,
-      completedObjectives: 0,
-      totalObjectives: 0,
+      completedObjectives:
+        progressByCourseId.get(course.id)?.completedObjectives ?? 0,
+      totalObjectives: progressByCourseId.get(course.id)?.totalObjectives ?? 0,
       createdAt: course.createdAt ? new Date(course.createdAt) : new Date(),
     }));
 
     return fetchedCourses;
-  }, [brainrotNameById, dbCourses]);
+  }, [brainrotNameById, dbCourses, progressByCourseId]);
 
   function getProgressPercent(course: Course) {
     if (course.totalObjectives <= 0) return 0;
@@ -273,13 +230,13 @@ export default function Page() {
         <CreateCourseDialog
           isOpen={isCreateOpen}
           onClose={() => setIsCreateOpen(false)}
-          onCreate={(data) => {
-            // Handle the creation process
-            setName(data.name);
-            setDescription(data.description);
-            setFiles(data.files);
-            setSelectedBrainrot(data.brainrotId);
-            // handleConfirmBrainrot();
+          onCreate={async (data) => {
+            await postCourse({
+              title: data.name,
+              description: data.description,
+              brainrot_id: data.brainrotId,
+            });
+            setIsCreateOpen(false);
           }}
           isCreating={isCreatingCourse}
           brainrotOptions={brainrotOptions}

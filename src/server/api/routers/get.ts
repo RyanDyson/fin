@@ -94,6 +94,40 @@ export const getRouter = createTRPCRouter({
       return results.map((r) => r.objectives);
     }),
 
+  getCourseProgress: protectedProcedure
+    .input(
+      z.object({
+        course_id: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db
+        .select({
+          objectiveId: objectives.id,
+          isDone: objectives.isDone,
+        })
+        .from(objectives)
+        .innerJoin(courses, eq(objectives.course_id, courses.id))
+        .where(
+          and(
+            eq(courses.id, input.course_id),
+            eq(courses.user_id, ctx.session.user.id),
+          ),
+        );
+
+      const totalObjectives = rows.length;
+      const completedObjectives = rows.filter((row) => row.isDone).length;
+      const completedRatio =
+        totalObjectives === 0 ? 0 : completedObjectives / totalObjectives;
+
+      return {
+        courseId: input.course_id,
+        totalObjectives,
+        completedObjectives,
+        completedRatio,
+      };
+    }),
+
   getChats: protectedProcedure
     .input(
       z.object({
