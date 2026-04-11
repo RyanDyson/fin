@@ -59,16 +59,13 @@ export default function Page() {
     data: dbCourses,
     isLoading: isCoursesLoading,
     error: coursesError,
-  } = api.get.getCourse.useQuery(
-    { user_id: resolvedUserId ?? "" },
-    { enabled: Boolean(resolvedUserId) },
-  );
+  } = api.get.getCourses.useQuery();
   const { data: dbBrainrots } = api.get.getBrainrot.useQuery();
   const { mutateAsync: postCourse, isPending: isCreatingCourse } =
     api.post.postCourse.useMutation({
       onSuccess: async () => {
         if (!resolvedUserId) return;
-        await utils.get.getCourse.invalidate({ user_id: resolvedUserId });
+        await utils.get.getCourses.invalidate();
       },
     });
 
@@ -126,7 +123,6 @@ export default function Page() {
     await postCourse({
       title: draftCourse.name,
       description: draftCourse.description,
-      user_id: resolvedUserId,
       brainrot_id: selectedBrainrotOption.id,
     });
 

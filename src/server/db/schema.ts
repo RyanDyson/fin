@@ -1,4 +1,11 @@
-import { boolean, integer, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export enum MessageRole {
   SYSTEM = "system",
@@ -114,8 +121,7 @@ export const chats = pgTable("chats", {
   active: boolean("active")
     .$defaultFn(() => false)
     .notNull(),
-  completedObjectives: integer("completed_objectives")
-    .notNull()
+  completedObjectives: integer("completed_objectives").notNull(),
 });
 
 export const messages = pgTable("messages", {
@@ -134,7 +140,7 @@ export const brainrot = pgTable("brainrot", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: text("name").notNull(),
   personalityPrompt: text("personality_prompt").notNull(),
-})
+});
 
 export const twoFactor = pgTable("two_factor", {
   id: text("id").primaryKey(),

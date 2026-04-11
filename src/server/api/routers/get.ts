@@ -14,6 +14,33 @@ export const getRouter = createTRPCRouter({
     return await ctx.db.select().from(courses).where(eq(courses.user_id, id));
   }),
 
+  getCourseById: protectedProcedure
+    .input(
+      z.object({
+        course_id: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const [result] = await ctx.db
+        .select()
+        .from(courses)
+        .where(
+          and(
+            eq(courses.id, input.course_id),
+            eq(courses.user_id, ctx.session.user.id),
+          ),
+        );
+
+      if (!result) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Course not found.",
+        });
+      }
+
+      return result;
+    }),
+
   getObjectives: protectedProcedure
     .input(
       z.object({

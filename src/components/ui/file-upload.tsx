@@ -16,7 +16,14 @@ import {
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useAsRef } from "@/hooks/use-as-ref";
-import { useLazyRef } from "@/hooks/use-lazy-ref";
+
+function useLazyRef<T>(fn: () => T) {
+  const ref = React.useRef<T | null>(null);
+
+  ref.current ??= fn();
+
+  return ref as React.RefObject<T>;
+}
 
 const ROOT_NAME = "FileUpload";
 const DROPZONE_NAME = "FileUploadDropzone";
@@ -144,7 +151,7 @@ function useStore<T>(selector: (state: StoreState) => T): T {
     const state = store.getState();
     const prevValue = lastValueRef.current;
 
-    if (prevValue && prevValue.state === state) {
+    if (prevValue?.state === state) {
       return prevValue.value;
     }
 
@@ -179,8 +186,10 @@ function useFileUploadContext(consumerName: string) {
   return context;
 }
 
-interface FileUploadProps
-  extends Omit<React.ComponentProps<"div">, "defaultValue" | "onChange"> {
+interface FileUploadProps extends Omit<
+  React.ComponentProps<"div">,
+  "defaultValue" | "onChange"
+> {
   value?: File[];
   defaultValue?: File[];
   onValueChange?: (files: File[]) => void;
@@ -808,9 +817,8 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       if (!items) return;
 
       const files: File[] = [];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item?.kind === "file") {
+      for (const item of Array.from(items)) {
+        if (item.kind === "file") {
           const file = item.getAsFile();
           if (file) {
             files.push(file);
@@ -866,7 +874,7 @@ function FileUploadDropzone(props: FileUploadDropzoneProps) {
       tabIndex={context.disabled ? undefined : 0}
       {...dropzoneProps}
       className={cn(
-        "relative flex select-none flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-disabled:pointer-events-none data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-invalid:ring-destructive/20",
+        "hover:bg-accent/30 focus-visible:border-ring/50 data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-invalid:ring-destructive/20 relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-colors outline-none select-none data-disabled:pointer-events-none",
         className,
       )}
       onClick={onClick}
@@ -936,7 +944,7 @@ function FileUploadList(props: FileUploadListProps) {
 
   const context = useFileUploadContext(LIST_NAME);
   const fileCount = useStore((state) => state.files.size);
-  const shouldRender = forceMount || fileCount > 0;
+  const shouldRender = forceMount ?? fileCount > 0;
 
   if (!shouldRender) return null;
 
@@ -953,7 +961,7 @@ function FileUploadList(props: FileUploadListProps) {
       dir={context.dir}
       {...listProps}
       className={cn(
-        "data-[state=inactive]:fade-out-0 data-[state=active]:fade-in-0 data-[state=inactive]:slide-out-to-top-2 data-[state=active]:slide-in-from-top-2 flex flex-col gap-2 data-[state=active]:animate-in data-[state=inactive]:animate-out",
+        "data-[state=inactive]:fade-out-0 data-[state=active]:fade-in-0 data-[state=inactive]:slide-out-to-top-2 data-[state=active]:slide-in-from-top-2 data-[state=active]:animate-in data-[state=inactive]:animate-out flex flex-col gap-2",
         orientation === "horizontal" && "flex-row overflow-x-auto p-1.5",
         className,
       )}
@@ -1107,7 +1115,7 @@ function FileUploadItemPreview(props: FileUploadItemPreviewProps) {
       data-slot="file-upload-preview"
       {...previewProps}
       className={cn(
-        "relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded border bg-accent/50 [&>svg]:size-10",
+        "bg-accent/50 relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded border [&>svg]:size-10",
         className,
       )}
     >
@@ -1150,8 +1158,8 @@ function FileUploadItemMetadata(props: FileUploadItemMetadataProps) {
           <span
             id={itemContext.nameId}
             className={cn(
-              "truncate font-medium text-sm",
-              size === "sm" && "font-normal text-[13px] leading-snug",
+              "truncate text-sm font-medium",
+              size === "sm" && "text-[13px] leading-snug font-normal",
             )}
           >
             {itemContext.fileState.file.name}
@@ -1159,7 +1167,7 @@ function FileUploadItemMetadata(props: FileUploadItemMetadataProps) {
           <span
             id={itemContext.sizeId}
             className={cn(
-              "truncate text-muted-foreground text-xs",
+              "text-muted-foreground truncate text-xs",
               size === "sm" && "text-[11px] leading-snug",
             )}
           >
@@ -1199,7 +1207,7 @@ function FileUploadItemProgress(props: FileUploadItemProgressProps) {
 
   if (!itemContext.fileState) return null;
 
-  const shouldRender = forceMount || itemContext.fileState.progress !== 100;
+  const shouldRender = forceMount ?? itemContext.fileState.progress !== 100;
 
   if (!shouldRender) return null;
 
@@ -1271,7 +1279,7 @@ function FileUploadItemProgress(props: FileUploadItemProgressProps) {
           data-slot="file-upload-progress"
           {...progressProps}
           className={cn(
-            "absolute inset-0 bg-primary/50 transition-[clip-path] duration-300 ease-linear",
+            "bg-primary/50 absolute inset-0 transition-[clip-path] duration-300 ease-linear",
             className,
           )}
           style={{
@@ -1293,12 +1301,12 @@ function FileUploadItemProgress(props: FileUploadItemProgressProps) {
           data-slot="file-upload-progress"
           {...progressProps}
           className={cn(
-            "relative h-1.5 w-full overflow-hidden rounded-full bg-primary/20",
+            "bg-primary/20 relative h-1.5 w-full overflow-hidden rounded-full",
             className,
           )}
         >
           <div
-            className="h-full w-full flex-1 bg-primary transition-transform duration-300 ease-linear"
+            className="bg-primary h-full w-full flex-1 transition-transform duration-300 ease-linear"
             style={{
               transform: `translateX(-${100 - itemContext.fileState.progress}%)`,
             }}
@@ -1379,7 +1387,7 @@ function FileUploadClear(props: FileUploadClearProps) {
     [store, onClickProp],
   );
 
-  const shouldRender = forceMount || fileCount > 0;
+  const shouldRender = forceMount ?? fileCount > 0;
 
   if (!shouldRender) return null;
 

@@ -14,7 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Check, Square } from "lucide-react";
-import { authClient } from "@/server/better-auth/client";
 import { api } from "@/trpc/react";
 
 type CoursePageProps = {
@@ -26,11 +25,8 @@ type CoursePageProps = {
 export default function Page({ params }: CoursePageProps) {
   const routeParams = use(params);
   const router = useRouter();
-  const { data: sessionData } = authClient.useSession();
   const utils = api.useUtils();
 
-  const resolvedUserId =
-    sessionData?.user.id ?? "rBji61OyvMYVCetmynej7FDOroGqUDT9";
   const courseId = Number(routeParams["courses-id"]);
   const isValidCourseId = Number.isInteger(courseId) && courseId > 0;
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -41,58 +37,47 @@ export default function Page({ params }: CoursePageProps) {
     data: course,
     isLoading: isCourseLoading,
     error: courseError,
-  } = api.get.getCourseById.useQuery(
-    {
-      user_id: resolvedUserId,
-      course_id: courseId,
-    },
-    {
-      enabled: Boolean(resolvedUserId) && isValidCourseId,
-    },
-  );
+  } = api.get.getCourseById.useQuery({
+    course_id: courseId,
+  });
 
-  const { data: activeChat } = api.get.getActiveChat.useQuery(
+  const { data: activeChat } = api.get.getChats.useQuery(
     { courseId },
     { enabled: isValidCourseId },
   );
 
-  const { data: chatHistory } = api.get.getChatHistory.useQuery(
+  const { data: chatHistory } = api.get.getChats.useQuery(
     { courseId },
     { enabled: isValidCourseId },
   );
 
   const { data: objectives, isLoading: isObjectivesLoading } =
-    api.get.getCourseObjectives.useQuery(
+    api.get.getDoneObjectives.useQuery(
       { course_id: courseId },
       { enabled: isValidCourseId },
     );
 
-  const { data: courseFiles } = api.get.getCourseFiles.useQuery(
-    { course_id: courseId },
-    { enabled: isValidCourseId },
-  );
+  // We don't have a course files endpoint currently, mocking it for now
+  const courseFiles: File[] = [];
 
   const { mutateAsync: startSession, isPending: isStartingSession } =
     api.post.postSession.useMutation({
       onSuccess: async () => {
-        await Promise.all([
-          utils.get.getActiveChat.invalidate({ courseId }),
-          utils.get.getChatHistory.invalidate({ courseId }),
-        ]);
+        await Promise.all([utils.get.getChats.invalidate({ courseId })]);
       },
     });
 
-  const { mutateAsync: uploadCourseFile } =
-    api.post.postorUploadFiles.useMutation({
-      onSuccess: async () => {
-        await utils.get.getCourseFiles.invalidate({ course_id: courseId });
-      },
-    });
+  // Upload file mock until API is implemented
+  const uploadCourseFile = async (data: File) => {
+    return data;
+  };
 
   const completedObjectiveIds = useMemo(() => {
     const ids = new Set<number>();
-    if (activeChat?.completedObjectives) {
-      ids.add(activeChat.completedObjectives);
+    for (const chat of activeChat ?? []) {
+      if (chat.completedObjectives) {
+        ids.add(chat.completedObjectives);
+      }
     }
     for (const chat of chatHistory ?? []) {
       if (chat.completedObjectives) {
@@ -122,7 +107,7 @@ export default function Page({ params }: CoursePageProps) {
 
     const newChat = await startSession({
       courseId,
-      active: true,
+      completedObjectiveId: 1, // Mock objective ID to start
     });
 
     router.push(`/dashboard/${courseId}/${newChat.id}`);
@@ -138,7 +123,7 @@ export default function Page({ params }: CoursePageProps) {
         const pseudoUrl = `https://uploaded.local/course-${courseId}/${encodedName}`;
 
         await uploadCourseFile({
-          course_id: courseId,
+          // course_id: courseId,
           file_url: pseudoUrl,
         });
       }
@@ -354,9 +339,9 @@ export default function Page({ params }: CoursePageProps) {
             <CardFooter className="justify-end">
               <Button
                 onClick={handleStartSession}
-                disabled={Boolean(activeChat) || isStartingSession}
+                disabled={Boolean(activeChat?.length) || isStartingSession}
               >
-                {activeChat
+                {activeChat?.length
                   ? `Continue Session`
                   : isStartingSession
                     ? "Starting session..."
