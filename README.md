@@ -1,40 +1,80 @@
-# Ryan's NEXT Boilerplate
+# Fin.
 
-This is a template / boilerplate for web application using my preferred technologies. Some basics are already set up like sign-in, sign-up pages and some basic navbar for landing page and dashboard. 
+Submission for GDGoC Hack@UST.
 
-Built for B2B SaaS and Hackathons because I'm lazy. 
+Fin is an AI-powered study platform built around the core philosophy of the **Feynman Technique**: you learn best by teaching. Upload your textbooks, PDFs, and slide decks, and Fin automatically extracts key concepts to build a personalized chat where you are challenged to explain concepts back to an AI tutor in your own words.
 
-## Technology Stack
+## Tech Stack
 
-This is more of a batteries included approach to NEXT. If you wish to go over and choose your own stack, better to not use this template.
+### Frontend & Core
+- **[Next.js 15](https://nextjs.org)** 
+- **[React](https://react.dev/)**
+- **[Tailwind CSS](https://tailwindcss.com)** 
+- **[Shadcn UI](https://ui.shadcn.com)** & **[ReUI](https://reui.io/)** 
+- **[Motion](https://motion.dev/)** 
 
-#### Framework & Routing
-- [Next.js](https://nextjs.org)
-- [React](https://react.dev/)
-#### Syling & UI
-- [ReUI](https://reui.io/)
-- [ShadCN](https://ui.shadcn.com)
-- [Tailwind CSS](https://tailwindcss.com)
-#### Authentication
-- [Better-Auth](https://www.better-auth.com/) 
-#### API
-- [tRPC](https://trpc.io)
-- [Drizzle](https://orm.drizzle.team)
-### Database 
-- [Neon PostgreSQL](https://neon.com/)
+### Backend & Data
+- **[tRPC](https://trpc.io)** - 
+- **[Drizzle ORM](https://orm.drizzle.team)**
+- **[Neon PostgreSQL](https://neon.com/)** 
+- **[Better-Auth](https://www.better-auth.com/)**
 
-## File Structure
+### AI Microservice
+- **FastAPI (Python)** 
+- **N8N (To serve models)** 
+- **Ollama (Embedding models & LLMs)** 
 
+## Getting Started
 
-## Learn More
+### Prerequisites
+- Node.js 18+
+- pnpm, npm, or yarn
+- PostgreSQL database (e.g., Neon)
+- The Fin FastAPI backend running locally or deployed.
 
-Most of the boilerplate is from T3-Start. To learn more about the [T3 Start](https://create.t3.gg/), take a look at the following resources:
+### Installation
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/fin.git
+   cd fin
+   ```
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app). 
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-## How do I deploy this?
+3. **Environment Variables**
+   Create a `.env` file in the root directory and add the following variables:
+   ```env
+   # Database
+   DATABASE_URL="postgresql://user:password@host/dbname"
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+   # Authentication (Better-Auth)
+   BETTER_AUTH_SECRET="your-super-secret-key"
+   BETTER_AUTH_URL="http://localhost:3000"
+
+   # AI Backend URL
+   FAST_API_URL="http://localhost:8000"
+   ```
+
+4. **Database Setup**
+   Push the schema to your database using Drizzle:
+   ```bash
+   pnpm db:push
+   ```
+
+5. **Run the Development Server**
+   ```bash
+   pnpm dev
+   ```
+   The app will be available at [http://localhost:3000](http://localhost:3000).
+
+## 📁 Project Structure
+
+- `/src/app` - Next.js App Router pages (Dashboard, Auth, Landing Page)
+- `/src/components` - React components (Chat UI, Modals, Forms, UI library)
+- `/src/hooks` - Custom React hooks (e.g., `useChat`)
+- `/src/server/api` - tRPC routers bridging the frontend to the DB and FastAPI
+- `/src/server/db` - Drizzle ORM schema and database configuration
