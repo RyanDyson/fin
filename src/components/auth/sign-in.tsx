@@ -73,7 +73,7 @@ export function SignIn() {
           Login
         </CardTitle>
         <CardDescription className="border-b px-6 pb-2 text-sm">
-          Welcome back to StudyRot
+          Welcome back to Fin
         </CardDescription>
       </CardHeader>
       <CardContent>

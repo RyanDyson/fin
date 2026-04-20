@@ -142,7 +142,8 @@ export function ResetPassword() {
             </div>
             <Button
               type="submit"
-              className="h-11 w-full rounded-full border font-medium text-white transition-colors"
+              variant="gradient"
+              className="h-11 w-full rounded-full border font-medium transition-colors"
               disabled={isLoading}
             >
               {isLoading ? "Sending..." : "Reset Password"}

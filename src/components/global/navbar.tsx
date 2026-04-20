@@ -19,11 +19,8 @@ export const Navbar = () => {
         {/* ── desktop row ──────────────────────────────────────── */}
         <div className="flex items-center justify-between gap-4 px-4 py-2.5">
           {/* brand */}
-          <Link
-            href="/"
-            className="font-serif text-sm font-semibold text-zinc-900 dark:text-zinc-50"
-          >
-            Logo
+          <Link href="/" className="text-primary text-xl font-semibold">
+            Fin
           </Link>
 
           {/* nav links — desktop */}
