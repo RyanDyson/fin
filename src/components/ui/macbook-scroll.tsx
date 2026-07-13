@@ -24,6 +24,7 @@ import { IconCommand } from "@tabler/icons-react";
 import { IconCaretLeftFilled } from "@tabler/icons-react";
 import { IconCaretDownFilled } from "@tabler/icons-react";
 import Image from "next/image";
+import type { StaticImageData } from "next/image";
 
 export const MacbookScroll = ({
   src,
@@ -31,7 +32,7 @@ export const MacbookScroll = ({
   title,
   badge,
 }: {
-  src?: string;
+  src?: string | StaticImageData;
   showGradient?: boolean;
   title?: string | React.ReactNode;
   badge?: React.ReactNode;
@@ -130,7 +131,7 @@ export const Lid = ({
   scaleY: MotionValue<number>;
   rotate: MotionValue<number>;
   translate: MotionValue<number>;
-  src?: string;
+  src?: string | StaticImageData;
 }) => {
   return (
     <div className="relative [perspective:800px]">
@@ -162,12 +163,13 @@ export const Lid = ({
         }}
         className="absolute inset-0 h-96 w-[32rem] rounded-2xl bg-[#010101] p-2"
       >
-        <div className="absolute inset-0 rounded-lg bg-[#272729]" />
+        <div className="bg-background absolute inset-0 rounded-lg" />
         <Image
-          src={src as string}
+          src={src}
           alt="aceternity logo"
           unoptimized
-          className="absolute inset-0 h-full w-full rounded-lg object-cover object-left-top"
+          width={1600}
+          className="absolute inset-0 h-full w-full rounded-lg object-contain"
         />
       </motion.div>
     </div>
