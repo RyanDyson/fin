@@ -15,19 +15,16 @@ export const Navbar = () => {
 
   return (
     <div className="fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-4">
-      <nav className="w-full max-w-3xl overflow-hidden rounded-2xl border border-zinc-200 bg-white/80 shadow-lg shadow-black/5 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-black/20">
+      <nav className="w-full max-w-3xl overflow-hidden rounded-2xl border border-zinc-200 bg-white/80 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-black/20">
         {/* ── desktop row ──────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+        <div className="relative flex items-center justify-between gap-4 px-4 py-2.5">
           {/* brand */}
-          <Link
-            href="/"
-            className="font-serif text-sm font-semibold text-zinc-900 dark:text-zinc-50"
-          >
-            Logo
+          <Link href="/" className="text-primary text-xl font-semibold">
+            Fin
           </Link>
 
           {/* nav links — desktop */}
-          <div className="hidden items-center gap-1 md:flex">
+          <div className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 md:flex">
             {navigation.map((nav) => (
               <Link
                 key={nav.href}
